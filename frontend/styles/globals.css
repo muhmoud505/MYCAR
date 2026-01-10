@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #__next {
+    height: 100%;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center px-4 py-2 rounded-md bg-primary text-white font-medium shadow-sm hover:bg-primary-600;
+  }
+  .card {
+    @apply bg-white rounded-lg shadow p-4;
+  }
+}
+
+html, body, #__next {
+  height: 100%;
+}
+
+/* Basic responsive utility classes available via Tailwind */
