@@ -29,11 +29,24 @@ exports.searchListings = async (req, res) => {
     const transmission = maybe('transmission')
     const color = maybe('color')
     const location = maybe('location')
+    const city = maybe('city')
+    const state = maybe('state')
+    const condition = maybe('condition')
+    const type = maybe('type')
+    const featured = maybe('featured')
+    const sortBy = maybe('sortBy') || 'createdAt'
+    const sortOrder = maybe('sortOrder') || 'desc'
 
-    const query = {}
+    const query = { status: 'active' }
+    
     if (q) {
       const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-      query.$or = [{ title: re }, { description: re }]
+      query.$or = [
+        { title: re }, 
+        { description: re },
+        { make: re },
+        { model: re }
+      ]
     }
     if (make) query.make = make
     if (model) query.model = model
@@ -41,13 +54,31 @@ exports.searchListings = async (req, res) => {
     if (fuelType) query.fuelType = fuelType
     if (transmission) query.transmission = transmission
     if (color) query.color = color
-    if (location) query.location = new RegExp(location, 'i')
+    if (condition) query.condition = condition
+    if (type) query.type = type
+    if (featured === 'true') query.featured = true
+    
+    // Location filters
+    if (location) {
+      query.$or = [
+        ...(query.$or || []),
+        { 'location.city': new RegExp(location, 'i') },
+        { 'location.state': new RegExp(location, 'i') },
+        { 'location.address': new RegExp(location, 'i') }
+      ]
+    }
+    if (city) query['location.city'] = new RegExp(city, 'i')
+    if (state) query['location.state'] = new RegExp(state, 'i')
+    
+    // Range filters
     if (minYear || maxYear) query.year = {}
     if (minYear) query.year.$gte = minYear
     if (maxYear) query.year.$lte = maxYear
+    
     if (minPrice || maxPrice) query.price = {}
     if (minPrice) query.price.$gte = minPrice
     if (maxPrice) query.price.$lte = maxPrice
+    
     if (minMileage || maxMileage) query.mileage = {}
     if (minMileage) query.mileage.$gte = minMileage
     if (maxMileage) query.mileage.$lte = maxMileage
@@ -56,9 +87,32 @@ exports.searchListings = async (req, res) => {
     const limit = Math.min(100, parseInt(req.query.limit || '20', 10))
     const skip = (page - 1) * limit
 
-    const results = await Listing.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit)
+    // Sorting
+    const sortOptions = {
+      [sortBy]: sortOrder === 'desc' ? -1 : 1
+    }
+
+    const results = await Listing.find(query)
+      .populate('seller', 'name email avatar isVerified verificationBadge')
+      .populate('dealership', 'name location')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit)
+    
     const total = await Listing.countDocuments(query)
-    res.json({ ok: true, total, page, limit, results })
+    
+    res.json({ 
+      ok: true, 
+      total, 
+      page, 
+      limit, 
+      results,
+      filters: {
+        make, model, minYear, maxYear, minPrice, maxPrice, 
+        minMileage, maxMileage, bodyType, fuelType, transmission, 
+        color, location, city, state, condition, type, featured
+      }
+    })
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message })
   }

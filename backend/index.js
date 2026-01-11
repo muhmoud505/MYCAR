@@ -23,6 +23,9 @@ const rentalsRoutes = require('./routes/rentals')
 const dealershipsRoutes = require('./routes/dealerships')
 const reviewsRoutes = require('./routes/reviews')
 const paymentsRoutes = require('./routes/payments')
+const messagesRoutes = require('./routes/messages')
+const rentalBookingRoutes = require('./routes/rental-booking')
+// const adminRoutes = require('./routes/admin')
 
 app.use('/api/auth', authRoutes)
 app.use('/api/listings', listingRoutes)
@@ -34,6 +37,9 @@ app.use('/api/rentals', rentalsRoutes)
 app.use('/api/dealerships', dealershipsRoutes)
 app.use('/api/reviews', reviewsRoutes)
 app.use('/api/payments', paymentsRoutes)
+app.use('/api/messages', messagesRoutes)
+app.use('/api/rental-booking', rentalBookingRoutes)
+// app.use('/api/admin', adminRoutes)
 
 // serve uploaded files
 const path = require('path')
@@ -44,5 +50,5 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: Date.now() })
 })
 
-const PORT = process.env.PORT || 4000
+const PORT = process.env.PORT || process.env.BACKEND_PORT || 4000
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`))

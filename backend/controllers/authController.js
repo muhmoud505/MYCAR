@@ -7,14 +7,42 @@ const nodemailer = require('nodemailer')
 
 async function register(req, res) {
   try {
-    const { email, password, name } = req.body
-    if (!email || !password) return res.status(400).json({ error: 'Missing fields' })
+    const { email, password, name, role = 'buyer', phone, location } = req.body
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+    
     const existing = await User.findOne({ email })
     if (existing) return res.status(409).json({ error: 'Email already registered' })
+    
     const hash = await bcrypt.hash(password, 10)
-    const user = await User.create({ email, password: hash, name })
-    res.status(201).json({ id: user._id, email: user.email })
+    const user = await User.create({ 
+      email, 
+      password: hash, 
+      name, 
+      role,
+      phone,
+      location
+    })
+    
+    // Send welcome email
+    if (process.env.SMTP_HOST) {
+      await sendWelcomeEmail(email, name)
+    }
+    
+    const token = jwt.sign({ sub: user._id, role: user.role }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '7d' })
+    res.status(201).json({ 
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: user.isVerified
+      }
+    })
   } catch (err) {
+    console.error('Registration error:', err)
     res.status(500).json({ error: 'Server error' })
   }
 }
@@ -26,9 +54,24 @@ async function login(req, res) {
     if (!user) return res.status(401).json({ error: 'Invalid credentials' })
     const ok = await bcrypt.compare(password, user.password)
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
+    
     const token = jwt.sign({ sub: user._id, role: user.role }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '7d' })
-    res.json({ token })
+    res.json({ 
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: user.isVerified,
+        verificationBadge: user.verificationBadge,
+        avatar: user.avatar,
+        phone: user.phone,
+        location: user.location
+      }
+    })
   } catch (err) {
+    console.error('Login error:', err)
     res.status(500).json({ error: 'Server error' })
   }
 }
@@ -68,7 +111,32 @@ async function listUsers(req, res) {
   }
 }
 
-module.exports = { register, login, me, changePassword, listUsers }
+module.exports = { register, login, me, changePassword, listUsers, forgotPassword, resetPassword }
+
+// Welcome email function
+async function sendWelcomeEmail(email, name) {
+  const host = process.env.SMTP_HOST
+  if (!host) {
+    console.log(`Welcome email would be sent to ${email}`)
+    return
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  })
+
+  const from = process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@mycar.local'
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: 'Welcome to MYCAR!',
+    text: `Welcome ${name}! Thank you for joining MYCAR. You can now start browsing, listing, and connecting with car buyers and sellers.`,
+    html: `<h2>Welcome to MYCAR, ${name}!</h2><p>Thank you for joining MYCAR. You can now start browsing, listing, and connecting with car buyers and sellers.</p>`
+  })
+}
 
 // Forgot password: create token and send email (no user enumeration)
 async function sendResetEmail(email, resetUrl) {
@@ -138,7 +206,3 @@ async function resetPassword(req, res) {
     res.status(500).json({ error: 'Server error' })
   }
 }
-
-// attach new exports
-module.exports.forgotPassword = forgotPassword
-module.exports.resetPassword = resetPassword
