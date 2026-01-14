@@ -2,10 +2,5 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/auth/login": "pages/auth/login.js",
-  "/search": "pages/search.js",
-  "/auth/register": "pages/auth/register.js",
-  "/rentals": "pages/rentals.js",
-  "/classifieds": "pages/classifieds.js"
+  "/admin/users/[id]": "pages/admin/users/[id].js"
 }

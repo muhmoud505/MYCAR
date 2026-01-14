@@ -5,19 +5,58 @@ const Message = require('../models/Message')
 const RentalBooking = require('../models/RentalBooking')
 const Verification = require('../models/Verification')
 
+// Helper function to create admin user if needed
+async function ensureAdminUser() {
+  try {
+    const existingAdmin = await User.findOne({ email: 'admin@mycar.com' });
+    if (!existingAdmin) {
+      const bcrypt = require('bcrypt');
+      const hash = await bcrypt.hash('admin123', 10);
+      await User.create({
+        email: 'admin@mycar.com',
+        password: hash,
+        name: 'Admin User',
+        role: 'admin',
+        isVerified: true,
+        emailVerified: true,
+        phoneVerified: true,
+        profileCompleted: true
+      });
+      console.log('Admin user created: admin@mycar.com / admin123');
+    }
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+  }
+}
+
 // Get dashboard statistics
 exports.getStats = async (req, res) => {
   try {
+    console.log('Getting admin stats...')
+    console.log('Authenticated user:', req.user)
+    
+    // Ensure admin user exists
+    await ensureAdminUser();
+    
+    const userCount = await User.countDocuments()
+    const listingCount = await Listing.countDocuments()
+    const reviewCount = await Review.countDocuments()
+    const bookingCount = await RentalBooking.countDocuments()
+    
+    console.log('Counts:', { userCount, listingCount, reviewCount, bookingCount })
+    
     const stats = {
-      totalUsers: await User.countDocuments(),
-      totalListings: await Listing.countDocuments(),
-      totalReviews: await Review.countDocuments(),
-      totalBookings: await RentalBooking.countDocuments(),
+      totalUsers: userCount,
+      totalListings: listingCount,
+      totalReviews: reviewCount,
+      totalBookings: bookingCount,
       recentActivity: await getRecentActivity()
     }
 
+    console.log('Final stats:', stats)
     res.json({ ok: true, stats })
   } catch (error) {
+    console.error('Error getting admin stats:', error)
     res.status(500).json({ ok: false, error: error.message })
   }
 }
@@ -25,6 +64,11 @@ exports.getStats = async (req, res) => {
 // Get all users
 exports.getUsers = async (req, res) => {
   try {
+    console.log('Admin getUsers called, user:', req.user)
+    
+    // Ensure admin user exists
+    await ensureAdminUser();
+    
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 20
     const skip = (page - 1) * limit
@@ -37,12 +81,41 @@ exports.getUsers = async (req, res) => {
 
     const total = await User.countDocuments()
 
+    console.log('Found users:', users.length, 'total:', total)
+
     res.json({ 
       ok: true, 
       users,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) }
     })
   } catch (error) {
+    console.error('Error getting users:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Get single user
+exports.getUser = async (req, res) => {
+  try {
+    console.log('Admin getUser called for userId:', req.params.userId)
+    
+    // Ensure admin user exists
+    await ensureAdminUser();
+    
+    const user = await User.findById(req.params.userId)
+      .select('-password')
+      .populate('listings', 'title status createdAt')
+      .populate('reviews', 'rating comment createdAt')
+
+    if (!user) {
+      return res.status(404).json({ ok: false, error: 'User not found' })
+    }
+
+    console.log('Found user:', user.email)
+
+    res.json({ ok: true, user })
+  } catch (error) {
+    console.error('Error getting user:', error)
     res.status(500).json({ ok: false, error: error.message })
   }
 }

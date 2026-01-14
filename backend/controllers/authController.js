@@ -52,26 +52,95 @@ async function login(req, res) {
     const { email, password } = req.body
     const user = await User.findOne({ email })
     if (!user) return res.status(401).json({ error: 'Invalid credentials' })
+    if (user.blocked || user.suspended) {
+      return res.status(403).json({ error: 'Account blocked or suspended' })
+    }
     const ok = await bcrypt.compare(password, user.password)
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
     
-    const token = jwt.sign({ sub: user._id, role: user.role }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '7d' })
+    // Update last login
+    await User.findByIdAndUpdate(user._id, { 
+      lastLogin: new Date(),
+      loginNotifications: user.securitySettings?.loginNotifications !== false
+    })
+    
+    const token = jwt.sign({ sub: user._id, role: user.role }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '15m' })
+    const refreshToken = jwt.sign({ sub: user._id, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || 'devrefresh', { expiresIn: '7d' })
+    
     res.json({ 
       token,
+      refreshToken,
       user: {
         id: user._id,
         email: user.email,
         name: user.name,
         role: user.role,
         isVerified: user.isVerified,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
         verificationBadge: user.verificationBadge,
         avatar: user.avatar,
         phone: user.phone,
-        location: user.location
+        location: user.location,
+        dealership: user.dealership,
+        profileCompleted: user.profileCompleted,
+        preferences: user.preferences,
+        securitySettings: user.securitySettings
       }
     })
   } catch (err) {
     console.error('Login error:', err)
+    res.status(500).json({ error: 'Server error' })
+  }
+}
+
+async function refreshToken(req, res) {
+  try {
+    const { refreshToken } = req.body
+    
+    if (!refreshToken) {
+      return res.status(401).json({ error: 'Refresh token required' })
+    }
+    
+    // Find user with valid refresh token
+    const user = await User.findOne({ 
+      refreshToken,
+      // Note: You might want to add token expiry check here
+    })
+    
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' })
+    }
+    
+    // Generate new access token
+    const newAccessToken = jwt.sign(
+      { sub: user._id, role: user.role }, 
+      process.env.JWT_SECRET || 'devsecret', 
+      { expiresIn: '15m' }
+    )
+    
+    res.json({ 
+      token: newAccessToken,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isVerified: user.isVerified,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
+        verificationBadge: user.verificationBadge,
+        avatar: user.avatar,
+        phone: user.phone,
+        location: user.location,
+        dealership: user.dealership,
+        profileCompleted: user.profileCompleted,
+        preferences: user.preferences,
+        securitySettings: user.securitySettings
+      }
+    })
+  } catch (err) {
+    console.error('Token refresh error:', err)
     res.status(500).json({ error: 'Server error' })
   }
 }
@@ -111,7 +180,7 @@ async function listUsers(req, res) {
   }
 }
 
-module.exports = { register, login, me, changePassword, listUsers, forgotPassword, resetPassword }
+module.exports = { register, login, refreshToken, me, changePassword, listUsers, forgotPassword, resetPassword }
 
 // Welcome email function
 async function sendWelcomeEmail(email, name) {

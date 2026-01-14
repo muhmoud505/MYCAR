@@ -1,12 +1,16 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
 
 async function req(path, opts = {}){
   const headers = opts.headers || {}
   const token = (typeof window !== 'undefined') ? localStorage.getItem('token') : null
   if (token) headers['Authorization'] = `Bearer ${token}`
-  headers['Content-Type'] = headers['Content-Type'] || 'application/json'
   
-  // Add timeout
+  // Don't set Content-Type for FormData (let browser set it with boundary)
+  if (!(opts.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json'
+  }
+  
+  // Add timeout and better error handling
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
   
@@ -25,10 +29,10 @@ async function req(path, opts = {}){
       try { 
         errorData = JSON.parse(text) 
       } catch (e) {
-        // If JSON parsing fails, use the raw text
+        // If JSON parsing fails, use raw text
       }
       
-      // Create a proper error object with response information
+      // Create proper error object
       const error = new Error(errorData.error || res.statusText)
       error.response = {
         status: res.status,
@@ -42,20 +46,13 @@ async function req(path, opts = {}){
   } catch (error) {
     clearTimeout(timeoutId)
     
-    // Re-throw with additional context if it's our custom error
-    if (error.response) {
-      throw error
-    }
-    
-    // Handle network errors, timeouts, etc.
+    // Handle network errors
     if (error.name === 'AbortError') {
-      const timeoutError = new Error('Request timed out')
-      timeoutError.code = 'ECONNABORTED'
-      throw timeoutError
+      throw new Error('Request timed out')
     }
     
-    if (error.message.includes('fetch')) {
-      const networkError = new Error('Network connection failed')
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Network connection failed. Please check if the backend server is running.')
       networkError.code = 'NETWORK_ERROR'
       throw networkError
     }
@@ -67,6 +64,7 @@ async function req(path, opts = {}){
 export const api = {
   login: (data) => req('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   register: (data) => req('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  refreshToken: (data) => req('/api/auth/refresh', { method: 'POST', body: JSON.stringify(data) }),
   forgotPassword: (data) => req('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
   resetPassword: (data) => req('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
   fetchListings: (query='') => req('/api/inventory' + (query ? `?${query}` : '')),
@@ -118,6 +116,11 @@ export const api = {
   // Accounts
   getProfile: () => req('/api/accounts/me'),
   updateProfile: (data) => req('/api/accounts/me', { method: 'PUT', body: JSON.stringify(data) }),
+  changePassword: (data) => req('/api/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  updatePreferences: (data) => req('/api/accounts/preferences', { method: 'PUT', body: JSON.stringify(data) }),
+  updateSocialLinks: (data) => req('/api/accounts/social-links', { method: 'PUT', body: JSON.stringify(data) }),
+  uploadAvatar: (data) => req('/api/accounts/avatar', { method: 'POST', body: data }),
+  deleteAccount: () => req('/api/accounts/delete', { method: 'DELETE' }),
 }
 
 export default api

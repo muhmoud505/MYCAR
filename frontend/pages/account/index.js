@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import Navbar from '../../components/Navbar'
 import ErrorAlert from '../../components/ErrorAlert'
 import { Icon } from '../../components/UI'
@@ -73,7 +74,7 @@ export default function AccountPage() {
         const listings = await api.fetchListings(`seller=${user._id}`)
         setUserListings(listings || [])
       } catch (err) {
-        console.log('No listings found or error loading listings')
+        console.log('No listings found or error loading listings:', err)
       }
       
       // Load user's reviews
@@ -81,7 +82,7 @@ export default function AccountPage() {
         const reviews = await api.getUserReviews()
         setUserReviews(reviews || [])
       } catch (err) {
-        console.log('No reviews found or error loading reviews')
+        console.log('No reviews found or error loading reviews:', err)
       }
       
       // Load user's messages
@@ -89,11 +90,59 @@ export default function AccountPage() {
         const messages = await api.getUnreadCount()
         setUserMessages(messages || [])
       } catch (err) {
-        console.log('No messages found or error loading messages')
+        console.log('No messages found or error loading messages:', err)
       }
       
     } catch (err) {
       console.error('Error loading user data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    console.log('File selected:', file.name, file.type, file.size)
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      setError('File size must be less than 5MB')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      console.log('Uploading avatar:', file.name)
+      
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('avatar', file)
+      
+      console.log('FormData created:')
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value)
+      }
+
+      const response = await api.uploadAvatar(formData)
+      console.log('Avatar upload response:', response)
+      
+      setSuccess('Profile picture updated successfully!')
+      await checkAuthStatus() // Refresh user data to show new avatar
+      
+      // Reset file input
+      e.target.value = ''
+    } catch (err) {
+      console.error('Avatar upload error:', err)
+      setError(parseApiError(err))
     } finally {
       setLoading(false)
     }
@@ -114,10 +163,13 @@ export default function AccountPage() {
 
     setLoading(true)
     try {
-      await api.updateProfile(profileForm)
+      console.log('Updating profile with data:', profileForm)
+      const response = await api.updateProfile(profileForm)
+      console.log('Profile update response:', response)
       setSuccess('Profile updated successfully!')
       await checkAuthStatus() // Refresh user data
     } catch (err) {
+      console.error('Profile update error:', err)
       setError(parseApiError(err))
     } finally {
       setLoading(false)
@@ -143,13 +195,57 @@ export default function AccountPage() {
 
     setLoading(true)
     try {
-      await api.changePassword({
+      console.log('Changing password')
+      const response = await api.changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       })
+      console.log('Password change response:', response)
       setSuccess('Password changed successfully!')
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
     } catch (err) {
+      console.error('Password change error:', err)
+      setError(parseApiError(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePreferencesUpdate = async (section, data) => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('Updating preferences:', { section, ...data })
+      
+      // Update preferences API call - backend expects { section: "preferences", ...data }
+      const response = await api.updatePreferences({ section, ...data })
+      console.log('Preferences update response:', response)
+      
+      setSuccess(`${section.charAt(0).toUpperCase() + section.slice(1)} updated successfully!`)
+      await checkAuthStatus() // Refresh user data
+    } catch (err) {
+      console.error('Preferences update error:', err)
+      setError(parseApiError(err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSocialLinkUpdate = async (platform, url) => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      console.log('Updating social link:', { platform, url })
+      
+      const response = await api.updateSocialLinks({ [platform]: url })
+      console.log('Social link update response:', response)
+      
+      setSuccess(`${platform.charAt(0).toUpperCase() + platform.slice(1)} profile updated!`)
+      await checkAuthStatus()
+    } catch (err) {
+      console.error('Social link update error:', err)
       setError(parseApiError(err))
     } finally {
       setLoading(false)
@@ -187,8 +283,20 @@ export default function AccountPage() {
         <div className="card p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mr-4">
-                <span className="text-primary-600 text-xl font-bold">
+              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mr-4 overflow-hidden">
+                {user?.avatar ? (
+                  <img 
+                    src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${user.avatar}`} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null
+                      e.target.style.display = 'none'
+                      e.target.nextSibling.style.display = 'flex'
+                    }}
+                  />
+                ) : null}
+                <span className="text-primary-600 text-xl font-bold" style={{display: user?.avatar ? 'none' : 'flex'}}>
                   {user.name?.charAt(0) || 'U'}
                 </span>
               </div>
@@ -218,7 +326,7 @@ export default function AccountPage() {
         {/* Tabs */}
         <div className="border-b border-secondary-200 mb-6">
           <nav className="flex space-x-8">
-            {['profile', 'listings', 'reviews', 'messages', 'security'].map((tab) => (
+            {['profile', 'listings', 'reviews', 'messages', 'security', 'preferences', 'social'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -240,6 +348,53 @@ export default function AccountPage() {
           {activeTab === 'profile' && (
             <div className="p-6">
               <h3 className="text-lg font-medium text-secondary-900 mb-6">Profile Information</h3>
+              
+              {/* Profile Picture Section */}
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-secondary-700 mb-4">
+                  Profile Picture
+                </label>
+                <div className="flex items-center space-x-6">
+                  <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
+                    {user?.avatar ? (
+                      <img 
+                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${user.avatar}`} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null
+                          e.target.style.display = 'none'
+                          e.target.nextSibling.style.display = 'flex'
+                        }}
+                      />
+                    ) : null}
+                    <span className="text-primary-600 text-2xl font-bold" style={{display: user?.avatar ? 'none' : 'flex'}}>
+                      {user.name?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  <div>
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      className="hidden"
+                      disabled={loading}
+                    />
+                    <label
+                      htmlFor="avatar-upload"
+                      className="btn btn-secondary cursor-pointer inline-flex items-center"
+                    >
+                      <Icon icon="upload" className="w-4 h-4 mr-2" />
+                      {loading ? 'Uploading...' : 'Upload Picture'}
+                    </label>
+                    <p className="text-sm text-secondary-500 mt-2">
+                      JPG, PNG or GIF (Max 5MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               <form onSubmit={handleProfileUpdate} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -428,54 +583,88 @@ export default function AccountPage() {
               <h3 className="text-lg font-medium text-secondary-900 mb-6">Security Settings</h3>
               
               <div className="space-y-8">
-                {/* Change Password */}
+                {/* Account Status */}
                 <div>
-                  <h4 className="text-md font-medium text-secondary-900 mb-4">Change Password</h4>
-                  <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-                    <div>
-                      <label className="block text-sm font-medium text-secondary-700 mb-2">
-                        Current Password
-                      </label>
-                      <input
-                        type="password"
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                        className="input"
-                        disabled={loading}
-                      />
+                  <h4 className="text-md font-medium text-secondary-900 mb-4">Account Status</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Email Verified</span>
+                      <span className={`badge ${user.emailVerified ? 'badge-success' : 'badge-secondary'}`}>
+                        {user.emailVerified ? 'Verified' : 'Not Verified'}
+                      </span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-secondary-700 mb-2">
-                        New Password
-                      </label>
-                      <input
-                        type="password"
-                        value={passwordForm.newPassword}
-                        onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                        className="input"
-                        disabled={loading}
-                      />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Phone Verified</span>
+                      <span className={`badge ${user.phoneVerified ? 'badge-success' : 'badge-secondary'}`}>
+                        {user.phoneVerified ? 'Verified' : 'Not Verified'}
+                      </span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-secondary-700 mb-2">
-                        Confirm New Password
-                      </label>
-                      <input
-                        type="password"
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                        className="input"
-                        disabled={loading}
-                      />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Profile Completed</span>
+                      <span className={`badge ${user.profileCompleted ? 'badge-success' : 'badge-secondary'}`}>
+                        {user.profileCompleted ? 'Complete' : 'Incomplete'}
+                      </span>
                     </div>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="btn btn-primary"
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Account Status</span>
+                      <span className={`badge ${user.blocked ? 'badge-error' : user.suspended ? 'badge-warning' : 'badge-success'}`}>
+                        {user.blocked ? 'Blocked' : user.suspended ? 'Suspended' : 'Active'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Two-Factor Authentication */}
+                <div>
+                  <h4 className="text-md font-medium text-secondary-900 mb-4">Two-Factor Authentication</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">2FA Status</span>
+                      <span className={`badge ${user.securitySettings?.twoFactorEnabled ? 'badge-success' : 'badge-secondary'}`}>
+                        {user.securitySettings?.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={() => handlePreferencesUpdate('security', { twoFactorEnabled: !user.securitySettings?.twoFactorEnabled })}
                     >
-                      {loading ? 'Changing...' : 'Change Password'}
+                      {user.securitySettings?.twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
                     </button>
-                  </form>
+                  </div>
+                </div>
+
+                {/* Login Notifications */}
+                <div>
+                  <h4 className="text-md font-medium text-secondary-900 mb-4">Login Notifications</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Email Alerts</span>
+                      <button
+                        className={`btn btn-sm ${user.securitySettings?.emailAlerts ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('security', { emailAlerts: !user.securitySettings?.emailAlerts })}
+                      >
+                        {user.securitySettings?.emailAlerts ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">SMS Alerts</span>
+                      <button
+                        className={`btn btn-sm ${user.securitySettings?.smsAlerts ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('security', { smsAlerts: !user.securitySettings?.smsAlerts })}
+                      >
+                        {user.securitySettings?.smsAlerts ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Login Notifications</span>
+                      <button
+                        className={`btn btn-sm ${user.securitySettings?.loginNotifications ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('security', { loginNotifications: !user.securitySettings?.loginNotifications })}
+                      >
+                        {user.securitySettings?.loginNotifications ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Account Actions */}
@@ -492,6 +681,225 @@ export default function AccountPage() {
                     </button>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Preferences Tab */}
+          {activeTab === 'preferences' && (
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-secondary-900 mb-6">User Preferences</h3>
+              
+              <div className="space-y-8">
+                {/* Language Settings */}
+                <div>
+                  <h4 className="text-md font-medium text-secondary-900 mb-4">Language & Region</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-secondary-700 mb-2">
+                        Display Language
+                      </label>
+                      <select
+                        value={user.preferences?.language || 'en'}
+                        onChange={(e) => handlePreferencesUpdate('preferences', { language: e.target.value })}
+                        className="input"
+                      >
+                        <option value="en">English</option>
+                        <option value="ar">العربية</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-secondary-700 mb-2">
+                        Currency
+                      </label>
+                      <select
+                        value={user.preferences?.currency || 'USD'}
+                        onChange={(e) => handlePreferencesUpdate('preferences', { currency: e.target.value })}
+                        className="input"
+                      >
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Theme Settings */}
+                <div>
+                  <h4 className="text-md font-medium text-secondary-900 mb-4">Appearance</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-secondary-700 mb-2">
+                        Theme
+                      </label>
+                      <select
+                        value={user.preferences?.theme || 'light'}
+                        onChange={(e) => handlePreferencesUpdate('preferences', { theme: e.target.value })}
+                        className="input"
+                      >
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="auto">Auto</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-secondary-700 mb-2">
+                        Search Radius (km)
+                      </label>
+                      <input
+                        type="number"
+                        value={user.preferences?.searchRadius || 50}
+                        onChange={(e) => handlePreferencesUpdate('preferences', { searchRadius: parseInt(e.target.value) })}
+                        className="input"
+                        min="1"
+                        max="500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-secondary-700 mb-2">
+                        Default Listing View
+                      </label>
+                      <select
+                        value={user.preferences?.listingView || 'grid'}
+                        onChange={(e) => handlePreferencesUpdate('preferences', { listingView: e.target.value })}
+                        className="input"
+                      >
+                        <option value="grid">Grid View</option>
+                        <option value="list">List View</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notification Settings */}
+                <div>
+                  <h4 className="text-md font-medium text-secondary-900 mb-4">Notifications</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Email Notifications</span>
+                      <button
+                        className={`btn btn-sm ${user.preferences?.notifications?.email ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('preferences', { notifications: { ...user.preferences?.notifications, email: !user.preferences?.notifications?.email } })}
+                      >
+                        {user.preferences?.notifications?.email ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">SMS Notifications</span>
+                      <button
+                        className={`btn btn-sm ${user.preferences?.notifications?.sms ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('preferences', { notifications: { ...user.preferences?.notifications, sms: !user.preferences?.notifications?.sms } })}
+                      >
+                        {user.preferences?.notifications?.sms ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Push Notifications</span>
+                      <button
+                        className={`btn btn-sm ${user.preferences?.notifications?.push ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('preferences', { notifications: { ...user.preferences?.notifications, push: !user.preferences?.notifications?.push } })}
+                      >
+                        {user.preferences?.notifications?.push ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Newsletter</span>
+                      <button
+                        className={`btn btn-sm ${user.preferences?.notifications?.newsletter ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('preferences', { notifications: { ...user.preferences?.notifications, newsletter: !user.preferences?.notifications?.newsletter } })}
+                      >
+                        {user.preferences?.notifications?.newsletter ? 'Subscribed' : 'Unsubscribed'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">New Listing Alerts</span>
+                      <button
+                        className={`btn btn-sm ${user.preferences?.notifications?.newListingAlerts ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('preferences', { notifications: { ...user.preferences?.notifications, newListingAlerts: !user.preferences?.notifications?.newListingAlerts } })}
+                      >
+                        {user.preferences?.notifications?.newListingAlerts ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-secondary-600">Price Drop Alerts</span>
+                      <button
+                        className={`btn btn-sm ${user.preferences?.notifications?.priceDropAlerts ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => handlePreferencesUpdate('preferences', { notifications: { ...user.preferences?.notifications, priceDropAlerts: !user.preferences?.notifications?.priceDropAlerts } })}
+                      >
+                        {user.preferences?.notifications?.priceDropAlerts ? 'Enabled' : 'Disabled'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Social Links Tab */}
+          {activeTab === 'social' && (
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-secondary-900 mb-6">Social Media Profiles</h3>
+              
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-secondary-700 mb-2">
+                      Facebook Profile
+                    </label>
+                    <input
+                      type="url"
+                      value={user.socialLinks?.facebook || ''}
+                      onChange={(e) => handleSocialLinkUpdate('facebook', e.target.value)}
+                      placeholder="https://facebook.com/yourprofile"
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary-700 mb-2">
+                      Twitter Profile
+                    </label>
+                    <input
+                      type="url"
+                      value={user.socialLinks?.twitter || ''}
+                      onChange={(e) => handleSocialLinkUpdate('twitter', e.target.value)}
+                      placeholder="https://twitter.com/yourprofile"
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary-700 mb-2">
+                      Instagram Profile
+                    </label>
+                    <input
+                      type="url"
+                      value={user.socialLinks?.instagram || ''}
+                      onChange={(e) => handleSocialLinkUpdate('instagram', e.target.value)}
+                      placeholder="https://instagram.com/yourprofile"
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-secondary-700 mb-2">
+                      LinkedIn Profile
+                    </label>
+                    <input
+                      type="url"
+                      value={user.socialLinks?.linkedin || ''}
+                      onChange={(e) => handleSocialLinkUpdate('linkedin', e.target.value)}
+                      placeholder="https://linkedin.com/in/yourprofile"
+                      className="input"
+                    />
+                  </div>
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn btn-primary mt-6"
+                >
+                  {loading ? 'Saving...' : 'Save Social Links'}
+                </button>
               </div>
             </div>
           )}

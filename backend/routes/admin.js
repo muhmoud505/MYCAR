@@ -1,8 +1,13 @@
 const express = require('express')
 const router = express.Router()
 const adminController = require('../controllers/adminController')
-const authMiddleware = require('../middleware/auth')
-const roleCheck = require('../middleware/roleCheck')
+const { authMiddleware, roleCheck } = require('../middleware/auth')
+
+// Add debugging middleware
+router.use((req, res, next) => {
+  console.log('Admin route accessed:', req.method, req.path)
+  next()
+})
 
 // Apply auth middleware to all admin routes
 router.use(authMiddleware)
@@ -16,6 +21,7 @@ router.get('/stats', adminController.getStats)
 
 // Users management
 router.get('/users', adminController.getUsers)
+router.get('/users/:userId', adminController.getUser)
 router.post('/users/:userId/verify', adminController.verifyUser)
 router.post('/users/:userId/suspend', adminController.suspendUser)
 

@@ -5,6 +5,7 @@ const AuthContext = createContext()
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
     checkAuthStatus()
@@ -20,40 +21,45 @@ export function AuthProvider({ children }) {
       }
 
       // Verify token with backend
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
       if (response.ok) {
         const data = await response.json()
-        if (data.ok) {
-          setUser(data.user)
-        } else {
-          setUser(null)
-          localStorage.removeItem('token')
-        }
+        setUser(data)
+        setIsAuthenticated(true)
       } else {
         setUser(null)
+        setIsAuthenticated(false)
         localStorage.removeItem('token')
       }
     } catch (error) {
       console.error('Auth check failed:', error)
       setUser(null)
+      setIsAuthenticated(false)
       localStorage.removeItem('token')
     } finally {
       setLoading(false)
     }
   }
 
-  const login = (token, userData) => {
+  const login = (token, user, refreshToken) => {
     localStorage.setItem('token', token)
-    setUser(userData)
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken)
+    }
+    setUser(user)
+    setIsAuthenticated(true)
+    setLoading(false)
   }
 
   const logout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     setUser(null)
-    // Optional: redirect to login page
+    setIsAuthenticated(false)
+    setLoading(false)
     window.location.href = '/auth/login'
   }
 
