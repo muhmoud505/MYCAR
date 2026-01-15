@@ -4,12 +4,13 @@ import { useLocale } from '../contexts/LocaleContext'
 export default function ListingCard({ listing }){
   const { t } = useLocale()
   const id = listing._id || listing.id
-  const img = listing.images && listing.images.length ? (listing.images[0].startsWith('http') ? listing.images[0] : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + listing.images[0]) : null
-  const thumb = listing.images && listing.images.length ? (() => {
-    const p = listing.images[0]
-    if (p.startsWith('http')) return p
-    const filename = p.split('/').pop()
-    return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/uploads/thumbs/thumb-' + filename
+  const firstImage = listing.images && listing.images.length ? listing.images[0] : null
+  const imageUrl = firstImage ? firstImage.url : null
+  const img = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + imageUrl) : null
+  const thumb = imageUrl ? (() => {
+    if (imageUrl.startsWith('http')) return imageUrl
+    const filename = imageUrl.split('/').pop()
+    return (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + '/uploads/thumbs/thumb-' + filename
   })() : null
   return (
     <Link href={`/inventory/${id}`} className="block card hover:shadow-lg overflow-hidden">

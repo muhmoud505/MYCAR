@@ -25,7 +25,8 @@ export default function CreateListing(){
   const [fuelType, setFuelType] = useState('')
   const [transmission, setTransmission] = useState('')
   const [color, setColor] = useState('')
-  const [location, setLocation] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
 
   async function handleSubmit(e){
     e.preventDefault()
@@ -44,7 +45,7 @@ export default function CreateListing(){
       validateRequired(fuelType, 'Fuel Type')
       validateRequired(transmission, 'Transmission')
       validateRequired(color, 'Color')
-      validateRequired(location, 'Location')
+      validateRequired(city, 'City')
       
       if (isNaN(price) || parseFloat(price) <= 0) {
         throw new Error('Price must be a valid positive number')
@@ -67,7 +68,11 @@ export default function CreateListing(){
       const listing = await api.createListing({
         title, description, price: Number(price),
         make, model: modelField, year, mileage,
-        bodyType, fuelType, transmission, color, location
+        bodyType, fuelType, transmission, color,
+        location: {
+          city,
+          state: state || ''
+        }
       })
       const id = listing._id || listing.id
       
@@ -76,7 +81,7 @@ export default function CreateListing(){
         const form = new FormData()
         for (const f of files) form.append('images', f)
         const token = localStorage.getItem('token')
-        const uploadResponse = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + `/api/listings/${id}/images`, {
+        const uploadResponse = await fetch(`/api/listings/${id}/images`, {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: form
@@ -307,17 +312,35 @@ export default function CreateListing(){
           </div>
 
           {/* Location */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('form.location')} *
-            </label>
-            <input 
-              value={location} 
-              onChange={e=>setLocation(e.target.value)} 
-              className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="New York, NY"
-              disabled={loading}
-            />
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Location</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('form.city')} *
+                </label>
+                <input 
+                  value={city} 
+                  onChange={e=>setCity(e.target.value)} 
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="New York"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('form.state')}
+                </label>
+                <input 
+                  value={state} 
+                  onChange={e=>setState(e.target.value)} 
+                  className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="NY"
+                  disabled={loading}
+                />
+              </div>
+            </div>
           </div>
 
           <button 

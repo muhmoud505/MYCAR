@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || ''
 
 async function req(path, opts = {}){
   const headers = opts.headers || {}
@@ -67,8 +67,8 @@ export const api = {
   refreshToken: (data) => req('/api/auth/refresh', { method: 'POST', body: JSON.stringify(data) }),
   forgotPassword: (data) => req('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
   resetPassword: (data) => req('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
-  fetchListings: (query='') => req('/api/inventory' + (query ? `?${query}` : '')),
-  fetchListing: (id) => req(`/api/inventory/${id}`),
+  fetchListings: (query='') => req('/api/listings' + (query ? `?${query}` : '')),
+  fetchListing: (id) => req(`/api/listings/${id}`),
   createListing: (data) => req('/api/listings', { method: 'POST', body: JSON.stringify(data) }),
   // Search
   search: (q) => req(`/api/search?${q}`),

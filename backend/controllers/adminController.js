@@ -127,14 +127,43 @@ exports.getListings = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20
     const skip = (page - 1) * limit
 
-    const listings = await Listing.find()
+    // Build query
+    let query = {}
+    
+    // Exclude inactive listings unless specifically requested
+    if (req.query.excludeInactive === 'true' && req.query.status !== 'inactive') {
+      query.status = { $ne: 'inactive' }
+    }
+    
+    // Add status filter if provided
+    if (req.query.status) {
+      query.status = req.query.status
+    }
+    
+    // Add type filter if provided
+    if (req.query.type) {
+      query.type = req.query.type
+    }
+    
+    // Add search filter if provided
+    if (req.query.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' }
+      query.$or = [
+        { title: searchRegex },
+        { make: searchRegex },
+        { model: searchRegex },
+        { description: searchRegex }
+      ]
+    }
+
+    const listings = await Listing.find(query)
       .populate('seller', 'name email')
       .populate('dealership', 'name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
 
-    const total = await Listing.countDocuments()
+    const total = await Listing.countDocuments(query)
 
     res.json({ 
       ok: true, 
@@ -309,18 +338,50 @@ exports.featureListing = async (req, res) => {
 
 exports.removeListing = async (req, res) => {
   try {
+    console.log('Removing listing:', req.params.listingId)
+    
     const listing = await Listing.findByIdAndUpdate(
       req.params.listingId,
       { status: 'inactive' },
       { new: true }
     )
 
+    console.log('Listing updated:', listing)
+
     if (!listing) {
+      console.log('Listing not found')
       return res.status(404).json({ ok: false, error: 'Listing not found' })
     }
 
+    console.log('Sending success response')
     res.json({ ok: true, message: 'Listing removed successfully', listing })
   } catch (error) {
+    console.error('Error removing listing:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.restoreListing = async (req, res) => {
+  try {
+    console.log('Restoring listing:', req.params.listingId)
+    
+    const listing = await Listing.findByIdAndUpdate(
+      req.params.listingId,
+      { status: 'active' },
+      { new: true }
+    )
+
+    console.log('Listing restored:', listing)
+
+    if (!listing) {
+      console.log('Listing not found')
+      return res.status(404).json({ ok: false, error: 'Listing not found' })
+    }
+
+    console.log('Sending restore success response')
+    res.json({ ok: true, message: 'Listing restored successfully', listing })
+  } catch (error) {
+    console.error('Error restoring listing:', error)
     res.status(500).json({ ok: false, error: error.message })
   }
 }

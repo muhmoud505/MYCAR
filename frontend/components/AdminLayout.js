@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { Icon } from './UI'
@@ -6,6 +6,7 @@ import { Icon } from './UI'
 export default function AdminLayout({ children, title }) {
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [user, setUser] = useState(null)
 
   const navigation = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: 'layout-dashboard' },
@@ -18,6 +19,28 @@ export default function AdminLayout({ children, title }) {
   ]
 
   const isActive = (href) => router.pathname === href
+
+  useEffect(() => {
+    fetchUserData()
+  }, [])
+
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/accounts/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data.user)
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -96,12 +119,18 @@ export default function AdminLayout({ children, title }) {
           {/* Admin User Info */}
           <div className="p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">A</span>
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-sm">
+                  {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
+                </span>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">Admin User</p>
-                <p className="text-xs text-gray-500">admin@mycar.com</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {user?.name || 'Admin User'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {user?.email || 'admin@mycar.com'}
+                </p>
               </div>
             </div>
           </div>

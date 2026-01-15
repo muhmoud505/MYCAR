@@ -29,6 +29,7 @@ router.post('/users/:userId/suspend', adminController.suspendUser)
 router.get('/listings', adminController.getListings)
 router.post('/listings/:listingId/feature', adminController.featureListing)
 router.post('/listings/:listingId/remove', adminController.removeListing)
+router.post('/listings/:listingId/restore', adminController.restoreListing)
 
 // Reviews management
 router.get('/reviews', adminController.getReviews)

@@ -100,33 +100,76 @@ async function create(req, res) {
 // Upload images for a listing
 async function uploadImages(req, res) {
   try {
+    console.log('Upload images called for listing:', req.params.id)
+    console.log('User from auth:', req.user)
+    console.log('Files received:', req.files?.length || 0)
+    
     const listingId = req.params.id
     const files = req.files || []
     if (!files.length) return res.status(400).json({ error: 'No files uploaded' })
+    
     const listing = await Listing.findById(listingId)
+    console.log('Found listing:', listing?._id, 'seller:', listing?.seller)
+    
     if (!listing) return res.status(404).json({ error: 'Listing not found' })
+    
     // Ensure uploader is the seller
-    if (String(listing.seller) !== String(req.user.id)) return res.status(403).json({ error: 'Forbidden' })
+    if (String(listing.seller) !== String(req.user.id)) {
+      console.log('Permission check failed:', {
+        listingSeller: String(listing.seller),
+        userId: String(req.user.id),
+        match: String(listing.seller) === String(req.user.id)
+      })
+      return res.status(403).json({ error: 'Forbidden' })
+    }
     const uploads = []
     const thumbsDir = path.join(__dirname, '..', 'uploads', 'thumbs')
-    if (!fs.existsSync(thumbsDir)) fs.mkdirSync(thumbsDir, { recursive: true })
+    console.log('Thumbs directory:', thumbsDir)
+    
+    if (!fs.existsSync(thumbsDir)) {
+      console.log('Creating thumbs directory...')
+      fs.mkdirSync(thumbsDir, { recursive: true })
+    }
+    
     for (const f of files) {
+      console.log('Processing file:', f.filename)
       const originalPath = path.posix.join('/uploads', f.filename)
       uploads.push(originalPath)
+      
       // generate thumbnail (300x200)
       const input = path.join(__dirname, '..', 'uploads', f.filename)
       const thumbName = `thumb-${f.filename}`
       const thumbPathFs = path.join(thumbsDir, thumbName)
+      
+      console.log('Processing thumbnail:', { input, thumbPathFs })
+      
       try {
         await sharp(input).resize(600, 400, { fit: 'cover' }).toFile(thumbPathFs)
+        console.log('Thumbnail created successfully:', thumbPathFs)
       } catch (err) {
         console.error('thumbnail error', err)
       }
     }
-    listing.images = listing.images ? listing.images.concat(uploads) : uploads
+    console.log('All files processed. Uploads array:', uploads)
+    
+    // Convert string paths to image objects
+    const imageObjects = uploads.map((url, index) => ({
+      url,
+      alt: `Listing image ${index + 1}`,
+      isMain: index === 0 // First image is the main image
+    }))
+    
+    console.log('Image objects:', imageObjects)
+    
+    listing.images = listing.images ? listing.images.concat(imageObjects) : imageObjects
+    console.log('Updated listing images:', listing.images)
+    
     await listing.save()
+    console.log('Listing saved successfully')
+    
     res.json({ images: listing.images })
   } catch (err) {
+    console.error('Upload error:', err)
     res.status(500).json({ error: 'Server error', details: err.message })
   }
 }
