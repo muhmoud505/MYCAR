@@ -2,7 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/admin/listings": "pages/admin/listings.js",
-  "/": "pages/index.js",
-  "/listings/create": "pages/listings/create.js"
+  "/auth/login": "pages/auth/login.js",
+  "/admin/dashboard-simple": "pages/admin/dashboard-simple.js",
+  "/admin/settings": "pages/admin/settings.js"
 }

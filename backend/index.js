@@ -57,7 +57,7 @@ const upload = multer({
 })
 
 app.use('/api/accounts', accountRoutes)
-// app.use('/api/classifieds', classifiedsRoutes)
+app.use('/api/classifieds', classifiedsRoutes)
 app.use('/api/rentals', rentalsRoutes)
 app.use('/api/dealerships', dealershipsRoutes)
 app.use('/api/reviews', reviewsRoutes)

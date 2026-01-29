@@ -33,12 +33,35 @@ router.post('/listings/:listingId/restore', adminController.restoreListing)
 
 // Reviews management
 router.get('/reviews', adminController.getReviews)
+router.post('/reviews/:reviewId/approve', adminController.approveReview)
+router.post('/reviews/:reviewId/flag', adminController.flagReview)
+router.post('/reviews/:reviewId/unflag', adminController.unflagReview)
+router.post('/reviews/:reviewId/remove', adminController.removeReview)
 
 // Messages management
 router.get('/messages', adminController.getMessages)
+router.post('/messages/:messageId/archive', adminController.archiveMessage)
+router.post('/messages/:messageId/delete', adminController.deleteMessage)
 
 // Bookings management
 router.get('/bookings', adminController.getBookings)
+router.post('/bookings/:bookingId/confirm', adminController.confirmBooking)
+router.post('/bookings/:bookingId/cancel', adminController.cancelBooking)
+
+// Dealerships management
+router.get('/dealerships', adminController.getDealerships)
+router.post('/dealerships/:dealershipId/verify', adminController.verifyDealership)
+router.post('/dealerships/:dealershipId/suspend', adminController.suspendDealership)
+
+// Rentals management
+router.get('/rentals', adminController.getRentals)
+router.post('/rentals/:rentalId/approve', adminController.approveRental)
+router.post('/rentals/:rentalId/remove', adminController.removeRental)
+
+// Classifieds management
+router.get('/classifieds', adminController.getClassifieds)
+router.post('/classifieds/:classifiedId/approve', adminController.approveClassified)
+router.post('/classifieds/:classifiedId/remove', adminController.removeClassified)
 
 // Verifications management
 router.get('/verifications', adminController.getVerifications)

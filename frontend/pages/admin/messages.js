@@ -4,86 +4,75 @@ import AdminLayout from '../../components/AdminLayout'
 import { Icon } from '../../components/UI'
 import { useLocale } from '../../contexts/LocaleContext'
 
-export default function AdminUsers() {
+export default function AdminMessages() {
   const { t, locale } = useLocale()
-  const router = useRouter()
-  const [users, setUsers] = useState([])
+  const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 })
 
   useEffect(() => {
-    loadUsers()
-  }, [pagination.page, searchTerm, roleFilter, statusFilter])
+    loadMessages()
+  }, [pagination.page, searchTerm, statusFilter])
 
-  const loadUsers = async () => {
+  const loadMessages = async () => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      console.log('Loading admin users with token:', token ? 'Present' : 'Missing')
       
       const params = new URLSearchParams({
         page: pagination.page,
         limit: pagination.limit,
         ...(searchTerm && { search: searchTerm }),
-        ...(roleFilter && { role: roleFilter }),
         ...(statusFilter && { status: statusFilter })
       })
 
-      console.log('Admin users API call:', `/api/admin/users?${params}`)
-
-      const response = await fetch(`/api/admin/users?${params}`, {
+      const response = await fetch(`/api/admin/messages?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
-      console.log('Admin users response status:', response.status)
-
       const data = await response.json()
-      console.log('Admin users response data:', data)
-      
       if (data.ok) {
-        setUsers(data.users)
+        setMessages(data.messages)
         setPagination(data.pagination)
-        console.log('Users loaded successfully:', data.users?.length)
       } else {
-        console.error('Admin users error:', data.error)
+        console.error('Admin messages error:', data.error)
       }
     } catch (error) {
-      console.error('Error loading users:', error)
+      console.error('Error loading messages:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleUserAction = async (userId, action) => {
+  const handleMessageAction = async (messageId, action) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/admin/users/${userId}/${action}`, {
+      const response = await fetch(`/api/admin/messages/${messageId}/${action}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       })
 
       if (response.ok) {
-        loadUsers()
+        loadMessages()
       }
     } catch (error) {
-      console.error('Error performing user action:', error)
+      console.error('Error performing message action:', error)
     }
   }
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = !roleFilter || user.role === roleFilter
-    const matchesStatus = !statusFilter || (statusFilter === 'verified' ? user.isVerified : !user.isVerified)
+  const filteredMessages = messages.filter(message => {
+    const matchesSearch = message.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         message.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (message.sender && message.sender.name && message.sender.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesStatus = !statusFilter || message.status === statusFilter
     
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesStatus
   })
 
   return (
-    <AdminLayout title={locale === 'ar' ? 'إدارة المستخدمين' : 'User Management'}>
+    <AdminLayout title={locale === 'ar' ? 'إدارة الرسائل' : 'Message Management'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -91,20 +80,16 @@ export default function AdminUsers() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                  <Icon icon="users" className="w-6 h-6 text-blue-600 mr-3" />
-                  {locale === 'ar' ? 'إدارة المستخدمين' : 'User Management'}
+                  <Icon icon="mail" className="w-6 h-6 text-blue-600 mr-3" />
+                  {locale === 'ar' ? 'إدارة الرسائل' : 'Message Management'}
                 </h1>
-                <p className="text-gray-600 mt-1">{locale === 'ar' ? 'إدارة ومراقبة جميع المستخدمين المسجلين' : 'Manage and monitor all registered users'}</p>
+                <p className="text-gray-600 mt-1">{locale === 'ar' ? 'إدارة ومراقبة جميع رسائل المستخدمين' : 'Manage and monitor all user messages'}</p>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">{locale === 'ar' ? 'إجمالي المستخدمين' : 'Total Users'}</p>
+                  <p className="text-sm text-gray-500">{locale === 'ar' ? 'إجمالي الرسائل' : 'Total Messages'}</p>
                   <p className="text-2xl font-bold text-gray-900">{pagination.total}</p>
                 </div>
-                <button className="btn btn-primary">
-                  <Icon icon="plus" className="w-4 h-4 mr-2" />
-                  {locale === 'ar' ? 'إضافة مستخدم' : 'Add User'}
-                </button>
               </div>
             </div>
           </div>
@@ -117,36 +102,19 @@ export default function AdminUsers() {
               <Icon icon="filter" className="w-5 h-5 text-blue-600 mr-2" />
               {locale === 'ar' ? 'المرشحات والبحث' : 'Filters & Search'}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Icon icon="search" className="w-4 h-4 inline mr-1" />
-                  {locale === 'ar' ? 'البحث عن المستخدمين' : 'Search Users'}
+                  {locale === 'ar' ? 'البحث في الرسائل' : 'Search Messages'}
                 </label>
                 <input
                   type="text"
-                  placeholder={locale === 'ar' ? 'البحث بالاسم أو البريد الإلكتروني...' : 'Search by name or email...'}
+                  placeholder={locale === 'ar' ? 'البحث بالعنوان أو المحتوى أو المرسل...' : 'Search by subject, content, or sender...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Icon icon="shield" className="w-4 h-4 inline mr-1" />
-                  {locale === 'ar' ? 'مرشح الدور' : 'Role Filter'}
-                </label>
-                <select 
-                  value={roleFilter} 
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">{locale === 'ar' ? 'جميع الأدوار' : 'All Roles'}</option>
-                  <option value="buyer">{locale === 'ar' ? 'مشتري' : 'Buyer'}</option>
-                  <option value="seller">{locale === 'ar' ? 'بائع' : 'Seller'}</option>
-                  <option value="dealer">{locale === 'ar' ? 'وكيل' : 'Dealer'}</option>
-                  <option value="admin">{locale === 'ar' ? 'مدير' : 'Admin'}</option>
-                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -159,15 +127,16 @@ export default function AdminUsers() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">{locale === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
-                  <option value="verified">{locale === 'ar' ? 'موثق' : 'Verified'}</option>
-                  <option value="unverified">{locale === 'ar' ? 'غير موثق' : 'Unverified'}</option>
+                  <option value="unread">{locale === 'ar' ? 'غير مقروء' : 'Unread'}</option>
+                  <option value="read">{locale === 'ar' ? 'مقروء' : 'Read'}</option>
+                  <option value="replied">{locale === 'ar' ? 'تم الرد عليه' : 'Replied'}</option>
+                  <option value="archived">{locale === 'ar' ? 'مؤرشف' : 'Archived'}</option>
                 </select>
               </div>
               <div className="flex items-end">
                 <button
                   onClick={() => {
                     setSearchTerm('')
-                    setRoleFilter('')
                     setStatusFilter('')
                   }}
                   className="w-full btn btn-secondary"
@@ -180,17 +149,17 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* Messages Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                 <Icon icon="list" className="w-5 h-5 text-blue-600 mr-2" />
-                {locale === 'ar' ? 'دليل المستخدمين' : 'Users Directory'}
+                {locale === 'ar' ? 'دليل الرسائل' : 'Messages Directory'}
               </h3>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500">
-                  {filteredUsers.length} {locale === 'ar' ? 'من' : 'of'} {pagination.total} {locale === 'ar' ? 'النتائج' : 'results'}
+                  {filteredMessages.length} {locale === 'ar' ? 'من' : 'of'} {pagination.total} {locale === 'ar' ? 'النتائج' : 'results'}
                 </span>
               </div>
             </div>
@@ -199,17 +168,17 @@ export default function AdminUsers() {
           {loading ? (
             <div className="p-12 text-center">
               <div className="loading-spinner w-12 h-12 mx-auto mb-4 text-blue-600"></div>
-              <p className="text-gray-600 text-lg">{locale === 'ar' ? 'جاري تحميل المستخدمين...' : 'Loading users...'}</p>
+              <p className="text-gray-600 text-lg">{locale === 'ar' ? 'جاري تحميل الرسائل...' : 'Loading messages...'}</p>
               <p className="text-gray-500 text-sm mt-2">{locale === 'ar' ? 'يرجى الانتظار بينما نحصل على البيانات' : 'Please wait while we fetch data'}</p>
             </div>
-          ) : filteredUsers.length === 0 ? (
+          ) : filteredMessages.length === 0 ? (
             <div className="p-12 text-center">
-              <Icon icon="users" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{locale === 'ar' ? 'لم يتم العثور على مستخدمين' : 'No users found'}</h3>
+              <Icon icon="mail" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{locale === 'ar' ? 'لم يتم العثور على رسائل' : 'No messages found'}</h3>
               <p className="text-gray-500">
-                {searchTerm || roleFilter || statusFilter 
+                {searchTerm || statusFilter 
                   ? (locale === 'ar' ? 'حاول تعديل المرشحات أو شروط البحث' : 'Try adjusting your filters or search terms') 
-                  : (locale === 'ar' ? 'لم يتم تسجيل أي مستخدمين بعد' : 'No users have been registered yet')}
+                  : (locale === 'ar' ? 'لم يتم إنشاء أي رسائل بعد' : 'No messages have been created yet')}
               </p>
             </div>
           ) : (
@@ -218,111 +187,83 @@ export default function AdminUsers() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'المستخدم' : 'User'}
+                    {locale === 'ar' ? 'الموضوع' : 'Subject'}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'الدور' : 'Role'}
+                    {locale === 'ar' ? 'المرسل' : 'Sender'}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {locale === 'ar' ? 'الحالة' : 'Status'}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'الموقع' : 'Location'}
+                    {locale === 'ar' ? 'تم الإنشاء' : 'Created'}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'تاريخ الانضمام' : 'Joined'}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'الإجراءات' : 'Actions'}
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredUsers.map((user) => (
-                    <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                  {filteredMessages.map((message) => (
+                    <tr key={message._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-12 w-12">
-                            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                              <span className="text-white font-semibold">
-                                {user.name?.charAt(0) || 'U'}
-                              </span>
+                            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                              <Icon icon="mail" className="w-6 h-6 text-blue-600" />
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-semibold text-gray-900">{user.name}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                            {user.phone && (
-                              <div className="text-xs text-gray-400 flex items-center mt-1">
-                                <Icon icon="phone" className="w-3 h-3 mr-1" />
-                                {user.phone}
-                              </div>
-                            )}
+                            <div className="text-sm font-semibold text-gray-900">{message.subject}</div>
+                            <div className="text-sm text-gray-600 line-clamp-2">{message.content}</div>
+                            <div className="text-xs text-gray-500">
+                              From: {message.sender?.name || 'Unknown'}
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeClass(user.role)}`}>
-                          <Icon icon={getRoleIcon(user.role)} className="w-3 h-3 mr-1" />
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col space-y-1">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            <Icon icon={user.isVerified ? 'check-circle' : 'alert-circle'} className="w-3 h-3 mr-1" />
-                            {user.isVerified ? 'Verified' : 'Unverified'}
-                          </span>
-                          {user.verificationBadge && (
-                            <span className="text-xs text-gray-500">
-                              {user.verificationBadge}
-                            </span>
-                          )}
+                        <div className="text-sm text-gray-900">
+                          {message.sender?.name || 'Unknown'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {message.sender?.email}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.location?.city && user.location?.state 
-                          ? (
-                            <div className="flex items-center">
-                              <Icon icon="map-pin" className="w-3 h-3 mr-1" />
-                              {user.location.city}, {user.location.state}
-                            </div>
-                          )
-                          : (
-                            <span className="text-gray-400">Not specified</span>
-                          )
-                        }
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(message.status)}`}>
+                          <Icon icon={getStatusIcon(message.status)} className="w-3 h-3 mr-1" />
+                          {message.status}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
                           <Icon icon="calendar" className="w-3 h-3 mr-1" />
-                          {new Date(user.createdAt).toLocaleDateString()}
+                          {new Date(message.createdAt).toLocaleDateString()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => router.push(`/admin/users/${user._id}`)}
+                            onClick={() => router.push(`/messages/${message._id}`)}
                             className="btn btn-sm btn-secondary hover:btn-primary transition-colors"
-                            title="View Details"
+                            title="View Message"
                           >
                             <Icon icon="eye" className="w-4 h-4" />
                           </button>
-                          {!user.isVerified && (
-                            <button
-                              onClick={() => handleUserAction(user._id, 'verify')}
-                              className="btn btn-sm btn-success hover:bg-green-600 transition-colors"
-                              title="Verify User"
-                            >
-                              <Icon icon="check-circle" className="w-4 h-4" />
-                            </button>
-                          )}
                           <button
-                            onClick={() => handleUserAction(user._id, 'suspend')}
-                            className="btn btn-sm btn-error hover:bg-red-600 transition-colors"
-                            title="Suspend User"
+                            onClick={() => handleMessageAction(message._id, 'archive')}
+                            className="btn btn-sm btn-warning hover:bg-yellow-600 transition-colors"
+                            title="Archive Message"
                           >
-                            <Icon icon="ban" className="w-4 h-4" />
+                            <Icon icon="archive" className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleMessageAction(message._id, 'delete')}
+                            className="btn btn-sm btn-error hover:bg-red-600 transition-colors"
+                            title="Delete Message"
+                          >
+                            <Icon icon="trash" className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -372,22 +313,22 @@ export default function AdminUsers() {
   )
 }
 
-function getRoleBadgeClass(role) {
+function getStatusBadgeClass(status) {
   const classes = {
-    admin: 'bg-red-100 text-red-800',
-    dealer: 'bg-blue-100 text-blue-800', 
-    seller: 'bg-green-100 text-green-800',
-    buyer: 'bg-gray-100 text-gray-800'
+    unread: 'bg-blue-100 text-blue-800',
+    read: 'bg-gray-100 text-gray-800',
+    replied: 'bg-green-100 text-green-800',
+    archived: 'bg-yellow-100 text-yellow-800'
   }
-  return classes[role] || 'bg-gray-100 text-gray-800'
+  return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
-function getRoleIcon(role) {
+function getStatusIcon(status) {
   const icons = {
-    admin: 'shield',
-    dealer: 'building',
-    seller: 'store',
-    buyer: 'user'
+    unread: 'mail',
+    read: 'check-circle',
+    replied: 'message-circle',
+    archived: 'archive'
   }
-  return icons[role] || 'user'
+  return icons[status] || 'circle'
 }

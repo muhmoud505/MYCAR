@@ -12,11 +12,6 @@
   ],
   "rootMainFiles": [],
   "pages": {
-    "/": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/index.js"
-    ],
     "/_app": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
@@ -27,15 +22,15 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
-    "/admin/listings": [
+    "/admin/dashboard-simple": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/admin/listings.js"
+      "static/chunks/pages/admin/dashboard-simple.js"
     ],
-    "/listings/create": [
+    "/admin/settings": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
-      "static/chunks/pages/listings/create.js"
+      "static/chunks/pages/admin/settings.js"
     ]
   },
   "ampFirstPages": []

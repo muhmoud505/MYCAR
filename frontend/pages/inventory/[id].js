@@ -28,9 +28,10 @@ export default function Detail(){
         <div className="bg-white p-4 rounded shadow">
           {item.images && item.images.length ? (
             <div className="grid gap-2 grid-cols-2 md:grid-cols-3 mb-4">
-              {item.images.map((src, i) => {
-                const url = src.startsWith('http') ? src : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + src
-                return <img key={i} src={url} className="w-full h-44 object-cover rounded" alt={`img-${i}`} />
+              {item.images.map((img, i) => {
+                const url = img.url || img
+                const imageUrl = url.startsWith('http') ? url : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000') + url
+                return <img key={i} src={imageUrl} className="w-full h-44 object-cover rounded" alt={`img-${i}`} />
               })}
             </div>
           ) : (

@@ -4,20 +4,20 @@ import AdminLayout from '../../components/AdminLayout'
 import { Icon } from '../../components/UI'
 import { useLocale } from '../../contexts/LocaleContext'
 
-export default function AdminListings() {
+export default function AdminReviews() {
   const { t, locale } = useLocale()
-  const [listings, setListings] = useState([])
+  const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
+  const [ratingFilter, setRatingFilter] = useState('')
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 })
 
   useEffect(() => {
-    loadListings()
-  }, [pagination.page, searchTerm, statusFilter, typeFilter])
+    loadReviews()
+  }, [pagination.page, searchTerm, statusFilter, ratingFilter])
 
-  const loadListings = async () => {
+  const loadReviews = async () => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
@@ -27,58 +27,66 @@ export default function AdminListings() {
         limit: pagination.limit,
         ...(searchTerm && { search: searchTerm }),
         ...(statusFilter && { status: statusFilter }),
-        ...(typeFilter && { type: typeFilter }),
-        // Don't include inactive listings unless specifically filtered
-        ...(!statusFilter && { excludeInactive: true })
+        ...(ratingFilter && { rating: ratingFilter })
       })
 
-      const response = await fetch(`/api/admin/listings?${params}`, {
+      const response = await fetch(`/api/admin/reviews?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
       const data = await response.json()
       if (data.ok) {
-        setListings(data.listings)
+        setReviews(data.reviews)
         setPagination(data.pagination)
       } else {
-        console.error('Admin listings error:', data.error)
+        console.error('Admin reviews error:', data.error)
       }
     } catch (error) {
-      console.error('Error loading listings:', error)
+      console.error('Error loading reviews:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleListingAction = async (listingId, action) => {
+  const handleReviewAction = async (reviewId, action) => {
     try {
-      console.log(`Performing ${action} on listing ${listingId}`)
       const token = localStorage.getItem('token')
-      
-      const response = await fetch(`/api/admin/listings/${listingId}/${action}`, {
+      const response = await fetch(`/api/admin/reviews/${reviewId}/${action}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       })
 
-      console.log(`${action} response status:`, response.status)
-      const data = await response.json()
-      console.log(`${action} response data:`, data)
-
       if (response.ok) {
-        console.log(`${action} successful, reloading listings`)
-        loadListings()
-      } else {
-        console.error(`${action} failed:`, data.error)
+        loadReviews()
       }
     } catch (error) {
-      console.error('Error performing listing action:', error)
+      console.error('Error performing review action:', error)
     }
   }
 
-  const filteredListings = listings // Backend already handles filtering
+  const filteredReviews = reviews.filter(review => {
+    const matchesSearch = review.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         review.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (review.target && review.target.name && review.target.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesStatus = !statusFilter || review.status === statusFilter
+    const matchesRating = !ratingFilter || review.rating === parseInt(ratingFilter)
+    
+    return matchesSearch && matchesStatus && matchesRating
+  })
+
+  const renderStars = (rating) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Icon 
+        key={i} 
+        icon="star" 
+        className={`w-4 h-4 ${i < rating ? 'text-yellow-400' : 'text-gray-300'}`}
+        fill={i < rating ? 'currentColor' : 'none'}
+      />
+    ))
+  }
 
   return (
-    <AdminLayout title={locale === 'ar' ? 'إدارة الإعلانات' : 'Listing Management'}>
+    <AdminLayout title={locale === 'ar' ? 'إدارة التقييمات' : 'Review Management'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -86,23 +94,16 @@ export default function AdminListings() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                  <Icon icon="car" className="w-6 h-6 text-blue-600 mr-3" />
-                  {locale === 'ar' ? 'إدارة الإعلانات' : 'Listing Management'}
+                  <Icon icon="star" className="w-6 h-6 text-blue-600 mr-3" />
+                  {locale === 'ar' ? 'إدارة التقييمات' : 'Review Management'}
                 </h1>
-                <p className="text-gray-600 mt-1">{locale === 'ar' ? 'إدارة ومراقبة جميع إعلانات المركبات' : 'Manage and monitor all vehicle listings'}</p>
+                <p className="text-gray-600 mt-1">{locale === 'ar' ? 'مراجعة وإدارة تقييمات المستخدمين' : 'Moderate and manage user reviews'}</p>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">{locale === 'ar' ? 'إجمالي الإعلانات' : 'Total Listings'}</p>
+                  <p className="text-sm text-gray-500">{locale === 'ar' ? 'إجمالي التقييمات' : 'Total Reviews'}</p>
                   <p className="text-2xl font-bold text-gray-900">{pagination.total}</p>
                 </div>
-                <button 
-                  onClick={() => router.push('/listings/create')}
-                  className="btn btn-primary"
-                >
-                  <Icon icon="plus" className="w-4 h-4 mr-2" />
-                  {locale === 'ar' ? 'إضافة إعلان' : 'Add Listing'}
-                </button>
               </div>
             </div>
           </div>
@@ -119,11 +120,11 @@ export default function AdminListings() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Icon icon="search" className="w-4 h-4 inline mr-1" />
-                  {locale === 'ar' ? 'البحث في الإعلانات' : 'Search Listings'}
+                  {locale === 'ar' ? 'البحث في التقييمات' : 'Search Reviews'}
                 </label>
                 <input
                   type="text"
-                  placeholder={locale === 'ar' ? 'البحث بالعنوان أو الماركة أو الموديل...' : 'Search by title, make, or model...'}
+                  placeholder={locale === 'ar' ? 'البحث بالعنوان أو المحتوى أو الهدف...' : 'Search by title, content, or target...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -140,27 +141,28 @@ export default function AdminListings() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">{locale === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
-                  <option value="active">{locale === 'ar' ? 'نشط' : 'Active'}</option>
+                  <option value="approved">{locale === 'ar' ? 'موافق عليه' : 'Approved'}</option>
                   <option value="pending">{locale === 'ar' ? 'معلق' : 'Pending'}</option>
-                  <option value="sold">{locale === 'ar' ? 'مباع' : 'Sold'}</option>
-                  <option value="rented">{locale === 'ar' ? 'مؤجر' : 'Rented'}</option>
-                  <option value="inactive">{locale === 'ar' ? 'غير نشط' : 'Inactive'}</option>
+                  <option value="flagged">{locale === 'ar' ? 'مبلغ عنه' : 'Flagged'}</option>
+                  <option value="removed">{locale === 'ar' ? 'تمت إزالته' : 'Removed'}</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Icon icon="tag" className="w-4 h-4 inline mr-1" />
-                  {locale === 'ar' ? 'مرشح النوع' : 'Type Filter'}
+                  <Icon icon="star" className="w-4 h-4 inline mr-1" />
+                  {locale === 'ar' ? 'مرشح التقييم' : 'Rating Filter'}
                 </label>
                 <select 
-                  value={typeFilter} 
-                  onChange={(e) => setTypeFilter(e.target.value)}
+                  value={ratingFilter} 
+                  onChange={(e) => setRatingFilter(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">{locale === 'ar' ? 'جميع الأنواع' : 'All Types'}</option>
-                  <option value="sale">{locale === 'ar' ? 'للبيع' : 'For Sale'}</option>
-                  <option value="rental">{locale === 'ar' ? 'للإيجار' : 'For Rent'}</option>
-                  <option value="classified">{locale === 'ar' ? 'مصنف' : 'Classified'}</option>
+                  <option value="">{locale === 'ar' ? 'جميع التقييمات' : 'All Ratings'}</option>
+                  <option value="5">{locale === 'ar' ? '5 نجوم' : '5 Stars'}</option>
+                  <option value="4">{locale === 'ar' ? '4 نجوم' : '4 Stars'}</option>
+                  <option value="3">{locale === 'ar' ? '3 نجوم' : '3 Stars'}</option>
+                  <option value="2">{locale === 'ar' ? 'نجمتان' : '2 Stars'}</option>
+                  <option value="1">{locale === 'ar' ? 'نجمة واحدة' : '1 Star'}</option>
                 </select>
               </div>
               <div className="flex items-end">
@@ -168,7 +170,7 @@ export default function AdminListings() {
                   onClick={() => {
                     setSearchTerm('')
                     setStatusFilter('')
-                    setTypeFilter('')
+                    setRatingFilter('')
                   }}
                   className="w-full btn btn-secondary"
                 >
@@ -180,17 +182,17 @@ export default function AdminListings() {
           </div>
         </div>
 
-        {/* Listings Table */}
+        {/* Reviews Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                 <Icon icon="list" className="w-5 h-5 text-blue-600 mr-2" />
-                {locale === 'ar' ? 'دليل الإعلانات' : 'Listings Directory'}
+                {locale === 'ar' ? 'دليل التقييمات' : 'Reviews Directory'}
               </h3>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500">
-                  {listings.length} {locale === 'ar' ? 'من' : 'of'} {pagination.total} {locale === 'ar' ? 'النتائج' : 'results'}
+                  {filteredReviews.length} {locale === 'ar' ? 'من' : 'of'} {pagination.total} {locale === 'ar' ? 'النتائج' : 'results'}
                 </span>
               </div>
             </div>
@@ -199,17 +201,17 @@ export default function AdminListings() {
           {loading ? (
             <div className="p-12 text-center">
               <div className="loading-spinner w-12 h-12 mx-auto mb-4 text-blue-600"></div>
-              <p className="text-gray-600 text-lg">{locale === 'ar' ? 'جاري تحميل الإعلانات...' : 'Loading listings...'}</p>
+              <p className="text-gray-600 text-lg">{locale === 'ar' ? 'جاري تحميل التقييمات...' : 'Loading reviews...'}</p>
               <p className="text-gray-500 text-sm mt-2">{locale === 'ar' ? 'يرجى الانتظار بينما نحصل على البيانات' : 'Please wait while we fetch data'}</p>
             </div>
-          ) : listings.length === 0 ? (
+          ) : filteredReviews.length === 0 ? (
             <div className="p-12 text-center">
-              <Icon icon="car" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{locale === 'ar' ? 'لم يتم العثور على إعلانات' : 'No listings found'}</h3>
+              <Icon icon="star" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{locale === 'ar' ? 'لم يتم العثور على تقييمات' : 'No reviews found'}</h3>
               <p className="text-gray-500">
-                {searchTerm || statusFilter || typeFilter 
+                {searchTerm || statusFilter || ratingFilter 
                   ? (locale === 'ar' ? 'حاول تعديل المرشحات أو شروط البحث' : 'Try adjusting your filters or search terms') 
-                  : (locale === 'ar' ? 'لم يتم إنشاء أي إعلانات بعد' : 'No listings have been created yet')}
+                  : (locale === 'ar' ? 'لم يتم إنشاء أي تقييمات بعد' : 'No reviews have been created yet')}
               </p>
             </div>
           ) : (
@@ -218,125 +220,115 @@ export default function AdminListings() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'المركبة' : 'Vehicle'}
+                      Review
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'السعر' : 'Price'}
+                    {locale === 'ar' ? 'التقييم' : 'Rating'}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'البائع' : 'Seller'}
+                    {locale === 'ar' ? 'الهدف' : 'Target'}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Reviewer
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Featured
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
+                    {locale === 'ar' ? 'الإجراءات' : 'Actions'}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {listings.map((listing) => (
-                    <tr key={listing._id} className={`hover:bg-gray-50 transition-colors ${listing.status === 'inactive' ? 'opacity-50' : ''}`}>
+                  {filteredReviews.map((review) => (
+                    <tr key={review._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12">
-                            {listing.images && listing.images.length > 0 ? (
-                              <img 
-                                src={listing.images[0].url} 
-                                alt={listing.title}
-                                className="h-12 w-12 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center">
-                                <Icon icon="car" className="w-6 h-6 text-gray-400" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-semibold text-gray-900">{listing.title}</div>
-                            <div className="text-sm text-gray-500">
-                              {listing.make} {listing.model} • {listing.year}
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900 mb-1">{review.title}</div>
+                          <div className="text-sm text-gray-600 line-clamp-2">{review.content}</div>
+                          {review.pros && (
+                            <div className="mt-2">
+                              <span className="text-xs font-medium text-green-600">Pros:</span>
+                              <div className="text-xs text-gray-600">{review.pros}</div>
                             </div>
-                          </div>
+                          )}
+                          {review.cons && (
+                            <div className="mt-2">
+                              <span className="text-xs font-medium text-red-600">Cons:</span>
+                              <div className="text-xs text-gray-600">{review.cons}</div>
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">
-                          ${listing.price.toLocaleString()}
+                        <div className="flex items-center">
+                          {renderStars(review.rating)}
+                          <span className="ml-2 text-sm text-gray-600">({review.rating}/5)</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {listing.seller?.name || 'Unknown'}
+                          {review.target?.name || 'N/A'}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {listing.seller?.email}
+                          {review.target?.type || 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(listing.status)}`}>
-                          <Icon icon={getStatusIcon(listing.status)} className="w-3 h-3 mr-1" />
-                          {listing.status}
-                        </span>
+                        <div className="text-sm text-gray-900">
+                          {review.reviewer?.name || 'Anonymous'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {review.reviewer?.email}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeBadgeClass(listing.type)}`}>
-                          <Icon icon={getTypeIcon(listing.type)} className="w-3 h-3 mr-1" />
-                          {listing.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${listing.featured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                          <Icon icon={listing.featured ? 'star' : 'star-off'} className="w-3 h-3 mr-1" />
-                          {listing.featured ? 'Featured' : 'Regular'}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(review.status)}`}>
+                          <Icon icon={getStatusIcon(review.status)} className="w-3 h-3 mr-1" />
+                          {review.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
                           <Icon icon="calendar" className="w-3 h-3 mr-1" />
-                          {new Date(listing.createdAt).toLocaleDateString()}
+                          {new Date(review.createdAt).toLocaleDateString()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => router.push(`/inventory/${listing._id}`)}
+                            onClick={() => router.push(`/reviews/${review._id}`)}
                             className="btn btn-sm btn-secondary hover:btn-primary transition-colors"
-                            title="View Listing"
+                            title="View Review"
                           >
                             <Icon icon="eye" className="w-4 h-4" />
                           </button>
-                          {!listing.featured && (
+                          {review.status === 'pending' && (
                             <button
-                              onClick={() => handleListingAction(listing._id, 'feature')}
+                              onClick={() => handleReviewAction(review._id, 'approve')}
                               className="btn btn-sm btn-success hover:bg-green-600 transition-colors"
-                              title="Feature Listing"
+                              title="Approve Review"
                             >
-                              <Icon icon="star" className="w-4 h-4" />
+                              <Icon icon="check-circle" className="w-4 h-4" />
                             </button>
                           )}
-                          {listing.status === 'inactive' ? (
+                          {review.status === 'flagged' && (
                             <button
-                              onClick={() => handleListingAction(listing._id, 'restore')}
+                              onClick={() => handleReviewAction(review._id, 'unflag')}
                               className="btn btn-sm btn-warning hover:bg-yellow-600 transition-colors"
-                              title="Restore Listing"
+                              title="Unflag Review"
                             >
-                              <Icon icon="rotate-ccw" className="w-4 h-4" />
+                              <Icon icon="flag" className="w-4 h-4" />
                             </button>
-                          ) : (
+                          )}
+                          {review.status !== 'removed' && (
                             <button
-                              onClick={() => handleListingAction(listing._id, 'remove')}
+                              onClick={() => handleReviewAction(review._id, 'remove')}
                               className="btn btn-sm btn-error hover:bg-red-600 transition-colors"
-                              title="Remove Listing"
+                              title="Remove Review"
                             >
                               <Icon icon="trash" className="w-4 h-4" />
                             </button>
@@ -391,40 +383,20 @@ export default function AdminListings() {
 
 function getStatusBadgeClass(status) {
   const classes = {
-    active: 'bg-green-100 text-green-800',
+    approved: 'bg-green-100 text-green-800',
     pending: 'bg-yellow-100 text-yellow-800',
-    sold: 'bg-red-100 text-red-800',
-    rented: 'bg-blue-100 text-blue-800',
-    inactive: 'bg-gray-100 text-gray-800 line-through'
+    flagged: 'bg-orange-100 text-orange-800',
+    removed: 'bg-red-100 text-red-800'
   }
   return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
 function getStatusIcon(status) {
   const icons = {
-    active: 'check-circle',
+    approved: 'check-circle',
     pending: 'clock',
-    sold: 'x-circle',
-    rented: 'calendar',
-    inactive: 'pause-circle'
+    flagged: 'flag',
+    removed: 'x-circle'
   }
   return icons[status] || 'circle'
-}
-
-function getTypeBadgeClass(type) {
-  const classes = {
-    sale: 'bg-blue-100 text-blue-800',
-    rental: 'bg-green-100 text-green-800',
-    classified: 'bg-purple-100 text-purple-800'
-  }
-  return classes[type] || 'bg-gray-100 text-gray-800'
-}
-
-function getTypeIcon(type) {
-  const icons = {
-    sale: 'tag',
-    rental: 'calendar',
-    classified: 'file-text'
-  }
-  return icons[type] || 'tag'
 }

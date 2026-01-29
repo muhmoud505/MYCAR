@@ -4,6 +4,9 @@ const Review = require('../models/Review')
 const Message = require('../models/Message')
 const RentalBooking = require('../models/RentalBooking')
 const Verification = require('../models/Verification')
+const Dealership = require('../models/Dealership')
+const Rental = require('../models/Rental')
+const Classified = require('../models/Classified')
 
 // Helper function to create admin user if needed
 async function ensureAdminUser() {
@@ -38,18 +41,90 @@ exports.getStats = async (req, res) => {
     // Ensure admin user exists
     await ensureAdminUser();
     
-    const userCount = await User.countDocuments()
-    const listingCount = await Listing.countDocuments()
-    const reviewCount = await Review.countDocuments()
-    const bookingCount = await RentalBooking.countDocuments()
+    const [
+      userCount,
+      listingCount,
+      activeListingCount,
+      dealershipCount,
+      verifiedDealershipCount,
+      rentalCount,
+      activeRentalCount,
+      pendingRentalCount,
+      classifiedCount,
+      approvedClassifiedCount,
+      pendingClassifiedCount,
+      reviewCount,
+      approvedReviewCount,
+      pendingReviewCount,
+      messageCount,
+      unreadMessageCount,
+      bookingCount,
+      confirmedBookingCount,
+      pendingBookingCount
+    ] = await Promise.all([
+      User.countDocuments(),
+      Listing.countDocuments(),
+      Listing.countDocuments({ status: 'active' }),
+      Dealership.countDocuments(),
+      Dealership.countDocuments({ verified: true }),
+      Rental.countDocuments(),
+      Rental.countDocuments({ status: 'active' }),
+      Rental.countDocuments({ status: 'pending' }),
+      Classified.countDocuments(),
+      Classified.countDocuments({ status: 'approved' }),
+      Classified.countDocuments({ status: 'pending' }),
+      Review.countDocuments(),
+      Review.countDocuments({ status: 'approved' }),
+      Review.countDocuments({ status: 'pending' }),
+      Message.countDocuments(),
+      Message.countDocuments({ status: 'unread' }),
+      RentalBooking.countDocuments(),
+      RentalBooking.countDocuments({ status: 'confirmed' }),
+      RentalBooking.countDocuments({ status: 'pending' })
+    ])
     
-    console.log('Counts:', { userCount, listingCount, reviewCount, bookingCount })
+    console.log('Counts:', { 
+      userCount, 
+      listingCount, 
+      activeListingCount,
+      dealershipCount,
+      verifiedDealershipCount,
+      rentalCount,
+      activeRentalCount,
+      pendingRentalCount,
+      classifiedCount,
+      approvedClassifiedCount,
+      pendingClassifiedCount,
+      reviewCount,
+      approvedReviewCount,
+      pendingReviewCount,
+      messageCount,
+      unreadMessageCount,
+      bookingCount,
+      confirmedBookingCount,
+      pendingBookingCount
+    })
     
     const stats = {
       totalUsers: userCount,
       totalListings: listingCount,
+      activeListings: activeListingCount,
+      totalDealerships: dealershipCount,
+      verifiedDealerships: verifiedDealershipCount,
+      totalRentals: rentalCount,
+      activeRentals: activeRentalCount,
+      pendingRentals: pendingRentalCount,
+      totalClassifieds: classifiedCount,
+      approvedClassifieds: approvedClassifiedCount,
+      pendingClassifieds: pendingClassifiedCount,
       totalReviews: reviewCount,
+      approvedReviews: approvedReviewCount,
+      pendingReviews: pendingReviewCount,
+      totalMessages: messageCount,
+      unreadMessages: unreadMessageCount,
       totalBookings: bookingCount,
+      confirmedBookings: confirmedBookingCount,
+      pendingBookings: pendingBookingCount,
       recentActivity: await getRecentActivity()
     }
 
@@ -382,6 +457,379 @@ exports.restoreListing = async (req, res) => {
     res.json({ ok: true, message: 'Listing restored successfully', listing })
   } catch (error) {
     console.error('Error restoring listing:', error)
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Dealerships management
+exports.getDealerships = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip = (page - 1) * limit
+
+    // Build query
+    let query = {}
+    
+    // Add search filter if provided
+    if (req.query.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' }
+      query.$or = [
+        { name: searchRegex },
+        { description: searchRegex },
+        { location: searchRegex }
+      ]
+    }
+
+    const dealerships = await Dealership.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+
+    const total = await Dealership.countDocuments(query)
+
+    res.json({ 
+      ok: true, 
+      dealerships,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+    })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.verifyDealership = async (req, res) => {
+  try {
+    const dealership = await Dealership.findByIdAndUpdate(
+      req.params.dealershipId,
+      { verified: true, verifiedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Dealership verified successfully', dealership })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.suspendDealership = async (req, res) => {
+  try {
+    const dealership = await Dealership.findByIdAndUpdate(
+      req.params.dealershipId,
+      { suspended: true, suspendedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Dealership suspended successfully', dealership })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Rentals management
+exports.getRentals = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip = (page - 1) * limit
+
+    // Build query
+    let query = {}
+    
+    // Add search filter if provided
+    if (req.query.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' }
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { make: searchRegex },
+        { model: searchRegex }
+      ]
+    }
+
+    const rentals = await Rental.find(query)
+      .populate('seller', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+
+    const total = await Rental.countDocuments(query)
+
+    res.json({ 
+      ok: true, 
+      rentals,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+    })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.approveRental = async (req, res) => {
+  try {
+    const rental = await Rental.findByIdAndUpdate(
+      req.params.rentalId,
+      { status: 'active' },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Rental approved successfully', rental })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.removeRental = async (req, res) => {
+  try {
+    const rental = await Rental.findByIdAndUpdate(
+      req.params.rentalId,
+      { status: 'inactive' },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Rental removed successfully', rental })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Classifieds management
+exports.getClassifieds = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip = (page - 1) * limit
+
+    // Build query
+    let query = {}
+    
+    // Add search filter if provided
+    if (req.query.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' }
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { category: searchRegex }
+      ]
+    }
+
+    const classifieds = await Classified.find(query)
+      .populate('seller', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+
+    const total = await Classified.countDocuments(query)
+
+    res.json({ 
+      ok: true, 
+      classifieds,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+    })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.approveClassified = async (req, res) => {
+  try {
+    const classified = await Classified.findByIdAndUpdate(
+      req.params.classifiedId,
+      { status: 'approved' },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Classified approved successfully', classified })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.removeClassified = async (req, res) => {
+  try {
+    const classified = await Classified.findByIdAndUpdate(
+      req.params.classifiedId,
+      { status: 'inactive' },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Classified removed successfully', classified })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Messages management
+exports.getMessages = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip = (page - 1) * limit
+
+    // Build query
+    let query = {}
+    
+    // Add search filter if provided
+    if (req.query.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' }
+      query.$or = [
+        { subject: searchRegex },
+        { content: searchRegex },
+        { 'sender.name': searchRegex }
+      ]
+    }
+
+    const messages = await Message.find(query)
+      .populate('sender', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+
+    const total = await Message.countDocuments(query)
+
+    res.json({ 
+      ok: true, 
+      messages,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+    })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Bookings management
+exports.getBookings = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 20
+    const skip = (page - 1) * limit
+
+    // Build query
+    let query = {}
+    
+    // Add search filter if provided
+    if (req.query.search) {
+      const searchRegex = { $regex: req.query.search, $options: 'i' }
+      query.$or = [
+        { 'listing.title': searchRegex },
+        { 'user.name': searchRegex },
+        { 'listing.make': searchRegex },
+        { 'listing.model': searchRegex }
+      ]
+    }
+
+    const bookings = await RentalBooking.find(query)
+      .populate('user', 'name email')
+      .populate('listing', 'title make model')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+
+    const total = await RentalBooking.countDocuments(query)
+
+    res.json({ 
+      ok: true, 
+      bookings,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) }
+    })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Review moderation actions
+exports.approveReview = async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(
+      req.params.reviewId,
+      { status: 'approved', approvedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Review approved successfully', review })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.flagReview = async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(
+      req.params.reviewId,
+      { status: 'flagged', flaggedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Review flagged successfully', review })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.unflagReview = async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(
+      req.params.reviewId,
+      { status: 'approved', unflaggedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Review unflagged successfully', review })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.removeReview = async (req, res) => {
+  try {
+    const review = await Review.findByIdAndUpdate(
+      req.params.reviewId,
+      { status: 'removed', removedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Review removed successfully', review })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Message management actions
+exports.archiveMessage = async (req, res) => {
+  try {
+    const message = await Message.findByIdAndUpdate(
+      req.params.messageId,
+      { status: 'archived', archivedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Message archived successfully', message })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.deleteMessage = async (req, res) => {
+  try {
+    const message = await Message.findByIdAndDelete(req.params.messageId)
+    res.json({ ok: true, message: 'Message deleted successfully', message })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+// Booking management actions
+exports.confirmBooking = async (req, res) => {
+  try {
+    const booking = await RentalBooking.findByIdAndUpdate(
+      req.params.bookingId,
+      { status: 'confirmed', confirmedAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Booking confirmed successfully', booking })
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message })
+  }
+}
+
+exports.cancelBooking = async (req, res) => {
+  try {
+    const booking = await RentalBooking.findByIdAndUpdate(
+      req.params.bookingId,
+      { status: 'cancelled', cancelledAt: new Date() },
+      { new: true }
+    )
+    res.json({ ok: true, message: 'Booking cancelled successfully', booking })
+  } catch (error) {
     res.status(500).json({ ok: false, error: error.message })
   }
 }

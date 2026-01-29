@@ -6,7 +6,7 @@ import { Icon } from '../../components/UI'
 import { useLocale } from '../../contexts/LocaleContext'
 
 export default function AdminDashboard() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const router = useRouter()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -25,13 +25,13 @@ export default function AdminDashboard() {
         return
       }
 
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch('/api/accounts/me', {
         headers: { Authorization: `Bearer ${token}` }
       })
 
       const data = await response.json()
-      if (data.ok && data.user.role === 'admin') {
-        setUser(data.user)
+      if (data.ok && data.profile.role === 'admin') {
+        setUser(data.profile)
       } else {
         router.push('/auth/login')
       }
@@ -58,11 +58,11 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <AdminLayout title="Dashboard">
+      <AdminLayout title={t('admin.dashboard.title')}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <div className="loading-spinner w-8 h-8 mx-auto mb-4"></div>
-            <p className="text-secondary-600">{t('form.loading')}</p>
+            <p className="text-gray-600">{t('form.loading')}</p>
           </div>
         </div>
       </AdminLayout>
@@ -74,140 +74,145 @@ export default function AdminDashboard() {
   }
 
   return (
-    <AdminLayout title="Dashboard">
+    <AdminLayout title={t('admin.dashboard.title')}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-secondary-900">
-            Welcome back, {user.name}!
-          </h1>
-          <p className="text-secondary-600 mt-1">
-            Here's what's happening with your MYCAR platform today.
-          </p>
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-6 text-white">
+            <h1 className="text-2xl font-bold mb-2">
+              {t('admin.dashboard.welcome')}, {user?.name || t('admin.users.admin')}!
+            </h1>
+            <p className="text-blue-100">
+              {t('admin.dashboard.overview')} - {new Date().toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
+            </p>
+          </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="card p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-primary-100 rounded-lg p-3">
-                <Icon icon="user" className="w-6 h-6 text-primary-600" />
+          {/* Users Stats */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Icon icon="users" className="w-6 h-6 text-blue-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Total Users</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.totalUsers || 0}</p>
-              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalUsers')}</span>
             </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalUsers || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{t('admin.users.active')}</p>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-accent-100 rounded-lg p-3">
-                <Icon icon="search" className="w-6 h-6 text-accent-600" />
+          {/* Listings Stats */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Icon icon="car" className="w-6 h-6 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Total Listings</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.totalListings || 0}</p>
-              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalListings')}</span>
             </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalListings || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.activeListings || 0} {t('admin.listings.active')}</p>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-success-100 rounded-lg p-3">
-                <Icon icon="star" className="w-6 h-6 text-success-600" />
+          {/* Dealerships Stats */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Icon icon="building" className="w-6 h-6 text-purple-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Total Reviews</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.totalReviews || 0}</p>
-              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalDealerships')}</span>
             </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalDealerships || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.verifiedDealerships || 0} {t('admin.dealerships.verified')}</p>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 bg-warning-100 rounded-lg p-3">
-                <Icon icon="calendar" className="w-6 h-6 text-warning-600" />
+          {/* Reviews Stats */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <Icon icon="star" className="w-6 h-6 text-yellow-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Total Bookings</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.totalBookings || 0}</p>
-              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalReviews')}</span>
             </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalReviews || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.pendingReviews || 0} {t('admin.reviews.pending')}</p>
+          </div>
+        </div>
+
+        {/* Additional Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Rentals */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Icon icon="calendar" className="w-6 h-6 text-orange-600" />
+              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalRentals')}</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalRentals || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.activeRentals || 0} {t('admin.rentals.active')}</p>
+          </div>
+
+          {/* Classifieds */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <Icon icon="file-text" className="w-6 h-6 text-indigo-600" />
+              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalClassifieds')}</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalClassifieds || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.approvedClassifieds || 0} {t('admin.classifieds.approved')}</p>
+          </div>
+
+          {/* Messages */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                <Icon icon="mail" className="w-6 h-6 text-red-600" />
+              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalMessages')}</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalMessages || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.unreadMessages || 0} {t('admin.messages.unread')}</p>
+          </div>
+
+          {/* Bookings */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                <Icon icon="calendar" className="w-6 h-6 text-teal-600" />
+              </div>
+              <span className="text-sm text-gray-500">{t('admin.dashboard.stats.totalBookings')}</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalBookings || 0}</p>
+            <p className="text-sm text-gray-600 mt-1">{stats.confirmedBookings || 0} {t('admin.bookings.confirmed')}</p>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-secondary-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <Link href="/admin/users" className="btn btn-secondary text-left">
-                <Icon icon="user" className="w-4 h-4 mr-2" />
-                Manage Users
-              </Link>
-              <Link href="/admin/listings" className="btn btn-secondary text-left">
-                <Icon icon="search" className="w-4 h-4 mr-2" />
-                Manage Listings
-              </Link>
-              <Link href="/admin/reviews" className="btn btn-secondary text-left">
-                <Icon icon="star" className="w-4 h-4 mr-2" />
-                Moderate Reviews
-              </Link>
-              <Link href="/admin/settings" className="btn btn-secondary text-left">
-                <Icon icon="check" className="w-4 h-4 mr-2" />
-                Settings
-              </Link>
-            </div>
-          </div>
-
-          <div className="card p-6">
-            <h3 className="text-lg font-medium text-secondary-900 mb-4">System Status</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-secondary-600">Database</span>
-                <span className="badge badge-success">Healthy</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-secondary-600">API Server</span>
-                <span className="badge badge-success">Running</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-secondary-600">File Storage</span>
-                <span className="badge badge-success">Available</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-secondary-600">Email Service</span>
-                <span className="badge badge-success">Connected</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="card">
-          <div className="p-6 border-b border-secondary-200">
-            <h3 className="text-lg font-medium text-secondary-900">Recent Activity</h3>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {stats.recentActivity?.map((activity, index) => (
-                <div key={index} className="flex items-center justify-between py-3 border-b border-secondary-100 last:border-0">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-primary-400 rounded-full mr-3"></div>
-                    <div>
-                      <p className="text-sm font-medium text-secondary-900">{activity.title}</p>
-                      <p className="text-xs text-secondary-500">{activity.time}</p>
-                    </div>
-                  </div>
-                  <span className={`badge ${getStatusColor(activity.status)}`}>
-                    {activity.status}
-                  </span>
-                </div>
-              )) || (
-                <p className="text-secondary-500 text-center py-4">No recent activity</p>
-              )}
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Icon icon="lightning" className="w-5 h-5 text-blue-600 mr-2" />
+            {t('admin.dashboard.quickActions')}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link href="/admin/users" className="btn btn-secondary justify-center">
+              <Icon icon="users" className="w-4 h-4 mr-2" />
+              {t('admin.navigation.users')}
+            </Link>
+            <Link href="/admin/listings" className="btn btn-secondary justify-center">
+              <Icon icon="car" className="w-4 h-4 mr-2" />
+              {t('admin.navigation.listings')}
+            </Link>
+            <Link href="/admin/dealerships" className="btn btn-secondary justify-center">
+              <Icon icon="building" className="w-4 h-4 mr-2" />
+              {t('admin.navigation.dealerships')}
+            </Link>
+            <Link href="/admin/reviews" className="btn btn-secondary justify-center">
+              <Icon icon="star" className="w-4 h-4 mr-2" />
+              {t('admin.navigation.reviews')}
+            </Link>
           </div>
         </div>
       </div>

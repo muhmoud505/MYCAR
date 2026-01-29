@@ -4,86 +4,75 @@ import AdminLayout from '../../components/AdminLayout'
 import { Icon } from '../../components/UI'
 import { useLocale } from '../../contexts/LocaleContext'
 
-export default function AdminUsers() {
+export default function AdminDealerships() {
   const { t, locale } = useLocale()
-  const router = useRouter()
-  const [users, setUsers] = useState([])
+  const [dealerships, setDealerships] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0 })
 
   useEffect(() => {
-    loadUsers()
-  }, [pagination.page, searchTerm, roleFilter, statusFilter])
+    loadDealerships()
+  }, [pagination.page, searchTerm, statusFilter])
 
-  const loadUsers = async () => {
+  const loadDealerships = async () => {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      console.log('Loading admin users with token:', token ? 'Present' : 'Missing')
       
       const params = new URLSearchParams({
         page: pagination.page,
         limit: pagination.limit,
         ...(searchTerm && { search: searchTerm }),
-        ...(roleFilter && { role: roleFilter }),
         ...(statusFilter && { status: statusFilter })
       })
 
-      console.log('Admin users API call:', `/api/admin/users?${params}`)
-
-      const response = await fetch(`/api/admin/users?${params}`, {
+      const response = await fetch(`/api/admin/dealerships?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
-      console.log('Admin users response status:', response.status)
-
       const data = await response.json()
-      console.log('Admin users response data:', data)
-      
       if (data.ok) {
-        setUsers(data.users)
+        setDealerships(data.dealerships)
         setPagination(data.pagination)
-        console.log('Users loaded successfully:', data.users?.length)
       } else {
-        console.error('Admin users error:', data.error)
+        console.error('Admin dealerships error:', data.error)
       }
     } catch (error) {
-      console.error('Error loading users:', error)
+      console.error('Error loading dealerships:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleUserAction = async (userId, action) => {
+  const handleDealershipAction = async (dealershipId, action) => {
     try {
       const token = localStorage.getItem('token')
-      const response = await fetch(`/api/admin/users/${userId}/${action}`, {
+      const response = await fetch(`/api/admin/dealerships/${dealershipId}/${action}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       })
 
       if (response.ok) {
-        loadUsers()
+        loadDealerships()
       }
     } catch (error) {
-      console.error('Error performing user action:', error)
+      console.error('Error performing dealership action:', error)
     }
   }
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesRole = !roleFilter || user.role === roleFilter
-    const matchesStatus = !statusFilter || (statusFilter === 'verified' ? user.isVerified : !user.isVerified)
+  const filteredDealerships = dealerships.filter(dealership => {
+    const matchesSearch = dealership.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         dealership.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         dealership.location.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = !statusFilter || dealership.status === statusFilter
     
-    return matchesSearch && matchesRole && matchesStatus
+    return matchesSearch && matchesStatus
   })
 
   return (
-    <AdminLayout title={locale === 'ar' ? 'إدارة المستخدمين' : 'User Management'}>
+    <AdminLayout title={locale === 'ar' ? 'إدارة الوكلاء' : 'Dealership Management'}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -91,19 +80,22 @@ export default function AdminUsers() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                  <Icon icon="users" className="w-6 h-6 text-blue-600 mr-3" />
-                  {locale === 'ar' ? 'إدارة المستخدمين' : 'User Management'}
+                  <Icon icon="building" className="w-6 h-6 text-blue-600 mr-3" />
+                  {locale === 'ar' ? 'إدارة الوكلاء' : 'Dealership Management'}
                 </h1>
-                <p className="text-gray-600 mt-1">{locale === 'ar' ? 'إدارة ومراقبة جميع المستخدمين المسجلين' : 'Manage and monitor all registered users'}</p>
+                <p className="text-gray-600 mt-1">{locale === 'ar' ? 'إدارة ومراقبة جميع الوكلاء' : 'Manage and monitor all dealerships'}</p>
               </div>
               <div className="flex items-center space-x-3">
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">{locale === 'ar' ? 'إجمالي المستخدمين' : 'Total Users'}</p>
+                  <p className="text-sm text-gray-500">{locale === 'ar' ? 'إجمالي الوكلاء' : 'Total Dealerships'}</p>
                   <p className="text-2xl font-bold text-gray-900">{pagination.total}</p>
                 </div>
-                <button className="btn btn-primary">
+                <button 
+                  onClick={() => router.push('/admin/dealerships/create')}
+                  className="btn btn-primary"
+                >
                   <Icon icon="plus" className="w-4 h-4 mr-2" />
-                  {locale === 'ar' ? 'إضافة مستخدم' : 'Add User'}
+                  {locale === 'ar' ? 'إضافة وكيل' : 'Add Dealership'}
                 </button>
               </div>
             </div>
@@ -117,36 +109,19 @@ export default function AdminUsers() {
               <Icon icon="filter" className="w-5 h-5 text-blue-600 mr-2" />
               {locale === 'ar' ? 'المرشحات والبحث' : 'Filters & Search'}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Icon icon="search" className="w-4 h-4 inline mr-1" />
-                  {locale === 'ar' ? 'البحث عن المستخدمين' : 'Search Users'}
+                  {locale === 'ar' ? 'البحث في الوكلاء' : 'Search Dealerships'}
                 </label>
                 <input
                   type="text"
-                  placeholder={locale === 'ar' ? 'البحث بالاسم أو البريد الإلكتروني...' : 'Search by name or email...'}
+                  placeholder={locale === 'ar' ? 'البحث بالاسم أو الوصف أو الموقع...' : 'Search by name, description, or location...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Icon icon="shield" className="w-4 h-4 inline mr-1" />
-                  {locale === 'ar' ? 'مرشح الدور' : 'Role Filter'}
-                </label>
-                <select 
-                  value={roleFilter} 
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">{locale === 'ar' ? 'جميع الأدوار' : 'All Roles'}</option>
-                  <option value="buyer">{locale === 'ar' ? 'مشتري' : 'Buyer'}</option>
-                  <option value="seller">{locale === 'ar' ? 'بائع' : 'Seller'}</option>
-                  <option value="dealer">{locale === 'ar' ? 'وكيل' : 'Dealer'}</option>
-                  <option value="admin">{locale === 'ar' ? 'مدير' : 'Admin'}</option>
-                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -161,13 +136,13 @@ export default function AdminUsers() {
                   <option value="">{locale === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
                   <option value="verified">{locale === 'ar' ? 'موثق' : 'Verified'}</option>
                   <option value="unverified">{locale === 'ar' ? 'غير موثق' : 'Unverified'}</option>
+                  <option value="suspended">{locale === 'ar' ? 'معلق' : 'Suspended'}</option>
                 </select>
               </div>
               <div className="flex items-end">
                 <button
                   onClick={() => {
                     setSearchTerm('')
-                    setRoleFilter('')
                     setStatusFilter('')
                   }}
                   className="w-full btn btn-secondary"
@@ -180,17 +155,17 @@ export default function AdminUsers() {
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* Dealerships Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                 <Icon icon="list" className="w-5 h-5 text-blue-600 mr-2" />
-                {locale === 'ar' ? 'دليل المستخدمين' : 'Users Directory'}
+                {locale === 'ar' ? 'دليل الوكلاء' : 'Dealerships Directory'}
               </h3>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500">
-                  {filteredUsers.length} {locale === 'ar' ? 'من' : 'of'} {pagination.total} {locale === 'ar' ? 'النتائج' : 'results'}
+                  {filteredDealerships.length} {locale === 'ar' ? 'من' : 'of'} {pagination.total} {locale === 'ar' ? 'النتائج' : 'results'}
                 </span>
               </div>
             </div>
@@ -199,17 +174,17 @@ export default function AdminUsers() {
           {loading ? (
             <div className="p-12 text-center">
               <div className="loading-spinner w-12 h-12 mx-auto mb-4 text-blue-600"></div>
-              <p className="text-gray-600 text-lg">{locale === 'ar' ? 'جاري تحميل المستخدمين...' : 'Loading users...'}</p>
+              <p className="text-gray-600 text-lg">{locale === 'ar' ? 'جاري تحميل الوكلاء...' : 'Loading dealerships...'}</p>
               <p className="text-gray-500 text-sm mt-2">{locale === 'ar' ? 'يرجى الانتظار بينما نحصل على البيانات' : 'Please wait while we fetch data'}</p>
             </div>
-          ) : filteredUsers.length === 0 ? (
+          ) : filteredDealerships.length === 0 ? (
             <div className="p-12 text-center">
-              <Icon icon="users" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{locale === 'ar' ? 'لم يتم العثور على مستخدمين' : 'No users found'}</h3>
+              <Icon icon="building" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No dealerships found</h3>
               <p className="text-gray-500">
-                {searchTerm || roleFilter || statusFilter 
-                  ? (locale === 'ar' ? 'حاول تعديل المرشحات أو شروط البحث' : 'Try adjusting your filters or search terms') 
-                  : (locale === 'ar' ? 'لم يتم تسجيل أي مستخدمين بعد' : 'No users have been registered yet')}
+                {searchTerm || statusFilter 
+                  ? 'Try adjusting your filters or search terms' 
+                  : 'No dealerships have been created yet'}
               </p>
             </div>
           ) : (
@@ -218,112 +193,80 @@ export default function AdminUsers() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'المستخدم' : 'User'}
+                      Dealership
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'الدور' : 'Role'}
+                      Location
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'الحالة' : 'Status'}
+                      Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'الموقع' : 'Location'}
+                      Created
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'تاريخ الانضمام' : 'Joined'}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'الإجراءات' : 'Actions'}
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredUsers.map((user) => (
-                    <tr key={user._id} className="hover:bg-gray-50 transition-colors">
+                  {filteredDealerships.map((dealership) => (
+                    <tr key={dealership._id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-12 w-12">
-                            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                              <span className="text-white font-semibold">
-                                {user.name?.charAt(0) || 'U'}
-                              </span>
+                            <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                              <Icon icon="building" className="w-6 h-6 text-blue-600" />
                             </div>
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-semibold text-gray-900">{user.name}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                            {user.phone && (
-                              <div className="text-xs text-gray-400 flex items-center mt-1">
-                                <Icon icon="phone" className="w-3 h-3 mr-1" />
-                                {user.phone}
-                              </div>
-                            )}
+                            <div className="text-sm font-semibold text-gray-900">{dealership.name}</div>
+                            <div className="text-sm text-gray-500">{dealership.description}</div>
                           </div>
                         </div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {dealership.location}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getRoleBadgeClass(user.role)}`}>
-                          <Icon icon={getRoleIcon(user.role)} className="w-3 h-3 mr-1" />
-                          {user.role}
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(dealership.status)}`}>
+                          <Icon icon={getStatusIcon(dealership.status)} className="w-3 h-3 mr-1" />
+                          {dealership.status}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col space-y-1">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            <Icon icon={user.isVerified ? 'check-circle' : 'alert-circle'} className="w-3 h-3 mr-1" />
-                            {user.isVerified ? 'Verified' : 'Unverified'}
-                          </span>
-                          {user.verificationBadge && (
-                            <span className="text-xs text-gray-500">
-                              {user.verificationBadge}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {user.location?.city && user.location?.state 
-                          ? (
-                            <div className="flex items-center">
-                              <Icon icon="map-pin" className="w-3 h-3 mr-1" />
-                              {user.location.city}, {user.location.state}
-                            </div>
-                          )
-                          : (
-                            <span className="text-gray-400">Not specified</span>
-                          )
-                        }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
                           <Icon icon="calendar" className="w-3 h-3 mr-1" />
-                          {new Date(user.createdAt).toLocaleDateString()}
+                          {new Date(dealership.createdAt).toLocaleDateString()}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => router.push(`/admin/users/${user._id}`)}
+                            onClick={() => router.push(`/dealerships/${dealership._id}`)}
                             className="btn btn-sm btn-secondary hover:btn-primary transition-colors"
-                            title="View Details"
+                            title="View Dealership"
                           >
                             <Icon icon="eye" className="w-4 h-4" />
                           </button>
-                          {!user.isVerified && (
+                          {dealership.status !== 'verified' && (
                             <button
-                              onClick={() => handleUserAction(user._id, 'verify')}
+                              onClick={() => handleDealershipAction(dealership._id, 'verify')}
                               className="btn btn-sm btn-success hover:bg-green-600 transition-colors"
-                              title="Verify User"
+                              title="Verify Dealership"
                             >
                               <Icon icon="check-circle" className="w-4 h-4" />
                             </button>
                           )}
-                          <button
-                            onClick={() => handleUserAction(user._id, 'suspend')}
-                            className="btn btn-sm btn-error hover:bg-red-600 transition-colors"
-                            title="Suspend User"
-                          >
-                            <Icon icon="ban" className="w-4 h-4" />
-                          </button>
+                          {dealership.status !== 'suspended' && (
+                            <button
+                              onClick={() => handleDealershipAction(dealership._id, 'suspend')}
+                              className="btn btn-sm btn-error hover:bg-red-600 transition-colors"
+                              title="Suspend Dealership"
+                            >
+                              <Icon icon="x-circle" className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -372,22 +315,20 @@ export default function AdminUsers() {
   )
 }
 
-function getRoleBadgeClass(role) {
+function getStatusBadgeClass(status) {
   const classes = {
-    admin: 'bg-red-100 text-red-800',
-    dealer: 'bg-blue-100 text-blue-800', 
-    seller: 'bg-green-100 text-green-800',
-    buyer: 'bg-gray-100 text-gray-800'
+    verified: 'bg-green-100 text-green-800',
+    unverified: 'bg-yellow-100 text-yellow-800',
+    suspended: 'bg-red-100 text-red-800'
   }
-  return classes[role] || 'bg-gray-100 text-gray-800'
+  return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
-function getRoleIcon(role) {
+function getStatusIcon(status) {
   const icons = {
-    admin: 'shield',
-    dealer: 'building',
-    seller: 'store',
-    buyer: 'user'
+    verified: 'check-circle',
+    unverified: 'clock',
+    suspended: 'x-circle'
   }
-  return icons[role] || 'user'
+  return icons[status] || 'circle'
 }
