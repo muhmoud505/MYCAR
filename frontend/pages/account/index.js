@@ -8,9 +8,10 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useLocale } from '../../contexts/LocaleContext'
 import { api } from '../../utils/api'
 import { parseApiError, validateEmail, validateRequired, validatePassword } from '../../utils/errorHandling'
+import { getStatusBadge } from '../../utils/statusTranslations'
 
 export default function AccountPage() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { user, isAuthenticated, logout, checkAuthStatus } = useAuth()
   const router = useRouter()
   
@@ -142,7 +143,7 @@ export default function AccountPage() {
       e.target.value = ''
     } catch (err) {
       console.error('Avatar upload error:', err)
-      setError(parseApiError(err))
+      setError(parseApiError(err, locale))
     } finally {
       setLoading(false)
     }
@@ -170,7 +171,7 @@ export default function AccountPage() {
       await checkAuthStatus() // Refresh user data
     } catch (err) {
       console.error('Profile update error:', err)
-      setError(parseApiError(err))
+      setError(parseApiError(err, locale))
     } finally {
       setLoading(false)
     }
@@ -205,7 +206,7 @@ export default function AccountPage() {
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
     } catch (err) {
       console.error('Password change error:', err)
-      setError(parseApiError(err))
+      setError(parseApiError(err, locale))
     } finally {
       setLoading(false)
     }
@@ -226,7 +227,7 @@ export default function AccountPage() {
       await checkAuthStatus() // Refresh user data
     } catch (err) {
       console.error('Preferences update error:', err)
-      setError(parseApiError(err))
+      setError(parseApiError(err, locale))
     } finally {
       setLoading(false)
     }
@@ -246,7 +247,7 @@ export default function AccountPage() {
       await checkAuthStatus()
     } catch (err) {
       console.error('Social link update error:', err)
-      setError(parseApiError(err))
+      setError(parseApiError(err, locale))
     } finally {
       setLoading(false)
     }
@@ -262,9 +263,11 @@ export default function AccountPage() {
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-secondary-900">My Account</h1>
+          <h1 className="text-3xl font-bold text-secondary-900">
+            {locale === 'ar' ? 'حسابي' : 'My Account'}
+          </h1>
           <p className="text-secondary-600 mt-2">
-            Manage your profile, listings, and account settings
+            {locale === 'ar' ? 'إدارة ملفك الشخصي، إعلاناتك وإعدادات الحساب' : 'Manage your profile, listings, and account settings'}
           </p>
         </div>
 
@@ -305,7 +308,7 @@ export default function AccountPage() {
                 <p className="text-secondary-600">{user.email}</p>
                 <div className="flex items-center mt-1 space-x-4">
                   <span className={`badge ${user.isVerified ? 'badge-success' : 'badge-secondary'}`}>
-                    {user.isVerified ? 'Verified' : 'Unverified'}
+                    {user.isVerified ? (locale === 'ar' ? 'موثق' : 'Verified') : (locale === 'ar' ? 'غير موثق' : 'Unverified')}
                   </span>
                   <span className="badge badge-accent">{user.role}</span>
                 </div>
@@ -316,7 +319,7 @@ export default function AccountPage() {
               <Link href="/admin/dashboard-simple">
                 <span className="btn btn-error">
                   <Icon icon="settings" className="w-4 h-4 mr-2" />
-                  Admin Dashboard
+                  {locale === 'ar' ? 'لوحة تحكم المشرف' : 'Admin Dashboard'}
                 </span>
               </Link>
             )}
@@ -326,17 +329,17 @@ export default function AccountPage() {
         {/* Tabs */}
         <div className="border-b border-secondary-200 mb-6">
           <nav className="flex space-x-8">
-            {['profile', 'listings', 'reviews', 'messages', 'security', 'preferences', 'social'].map((tab) => (
+            {[{key: 'profile', ar: 'الملف الشخصي', en: 'Profile'}, {key: 'listings', ar: 'الإعلانات', en: 'Listings'}, {key: 'reviews', ar: 'التقييمات', en: 'Reviews'}, {key: 'messages', ar: 'الرسائل', en: 'Messages'}, {key: 'security', ar: 'الأمان', en: 'Security'}, {key: 'preferences', ar: 'التفضيلات', en: 'Preferences'}, {key: 'social', ar: 'وسائل التواصل', en: 'Social'}].map((tab) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm capitalize ${
                   activeTab === tab
                     ? 'border-primary-500 text-primary-600'
                     : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
                 }`}
               >
-                {tab}
+                {locale === 'ar' ? tab.ar : tab.en}
               </button>
             ))}
           </nav>
@@ -347,12 +350,14 @@ export default function AccountPage() {
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="p-6">
-              <h3 className="text-lg font-medium text-secondary-900 mb-6">Profile Information</h3>
+              <h3 className="text-lg font-medium text-secondary-900 mb-6">
+                {locale === 'ar' ? 'معلومات الملف الشخصي' : 'Profile Information'}
+              </h3>
               
               {/* Profile Picture Section */}
               <div className="mb-8">
                 <label className="block text-sm font-medium text-secondary-700 mb-4">
-                  Profile Picture
+                  {locale === 'ar' ? 'الصورة الشخصية' : 'Profile Picture'}
                 </label>
                 <div className="flex items-center space-x-6">
                   <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center overflow-hidden">
@@ -386,10 +391,10 @@ export default function AccountPage() {
                       className="btn btn-secondary cursor-pointer inline-flex items-center"
                     >
                       <Icon icon="upload" className="w-4 h-4 mr-2" />
-                      {loading ? 'Uploading...' : 'Upload Picture'}
+                      {loading ? (locale === 'ar' ? 'جاري الرفع...' : 'Uploading...') : (locale === 'ar' ? 'رفع الصورة' : 'Upload Picture')}
                     </label>
                     <p className="text-sm text-secondary-500 mt-2">
-                      JPG, PNG or GIF (Max 5MB)
+                      {locale === 'ar' ? 'JPG، PNG أو GIF (الحد الأقصى 5 ميجابايت)' : 'JPG, PNG or GIF (Max 5MB)'}
                     </p>
                   </div>
                 </div>
@@ -399,7 +404,7 @@ export default function AccountPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-secondary-700 mb-2">
-                      Full Name
+                      {locale === 'ar' ? 'الاسم الكامل' : 'Full Name'}
                     </label>
                     <input
                       type="text"
@@ -411,7 +416,7 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-secondary-700 mb-2">
-                      Email Address
+                      {locale === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
                     </label>
                     <input
                       type="email"
@@ -423,7 +428,7 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-secondary-700 mb-2">
-                      Phone Number
+                      {locale === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
                     </label>
                     <input
                       type="tel"
@@ -435,7 +440,7 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-secondary-700 mb-2">
-                      City
+                      {locale === 'ar' ? 'المدينة' : 'City'}
                     </label>
                     <input
                       type="text"
@@ -450,7 +455,7 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-secondary-700 mb-2">
-                      State
+                      {locale === 'ar' ? 'الولاية' : 'State'}
                     </label>
                     <input
                       type="text"
@@ -465,7 +470,7 @@ export default function AccountPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-secondary-700 mb-2">
-                      Country
+                      {locale === 'ar' ? 'البلد' : 'Country'}
                     </label>
                     <input
                       type="text"
@@ -485,7 +490,7 @@ export default function AccountPage() {
                   disabled={loading}
                   className="btn btn-primary"
                 >
-                  {loading ? 'Saving...' : 'Save Changes'}
+                  {loading ? (locale === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (locale === 'ar' ? 'حفظ التغييرات' : 'Save Changes')}
                 </button>
               </form>
             </div>
@@ -494,7 +499,9 @@ export default function AccountPage() {
           {/* Listings Tab */}
           {activeTab === 'listings' && (
             <div className="p-6">
-              <h3 className="text-lg font-medium text-secondary-900 mb-6">My Listings</h3>
+              <h3 className="text-lg font-medium text-secondary-900 mb-6">
+                {locale === 'ar' ? 'إعلاناتي' : 'My Listings'}
+              </h3>
               {userListings.length > 0 ? (
                 <div className="space-y-4">
                   {userListings.map((listing) => (
@@ -504,12 +511,12 @@ export default function AccountPage() {
                           <h4 className="font-medium text-secondary-900">{listing.title}</h4>
                           <p className="text-secondary-600">${listing.price}</p>
                           <p className="text-sm text-secondary-500">
-                            Status: <span className="badge">{listing.status}</span>
+                            {locale === 'ar' ? 'الحالة:' : 'Status:'} <span className={`badge ${getStatusBadge(listing.status, locale).color}`}>{getStatusBadge(listing.status, locale).text}</span>
                           </p>
                         </div>
                         <div className="flex space-x-2">
-                          <button className="btn btn-sm btn-secondary">Edit</button>
-                          <button className="btn btn-sm btn-error">Delete</button>
+                          <button className="btn btn-sm btn-secondary">{locale === 'ar' ? 'تعديل' : 'Edit'}</button>
+                          <button className="btn btn-sm btn-error">{locale === 'ar' ? 'حذف' : 'Delete'}</button>
                         </div>
                       </div>
                     </div>
@@ -518,9 +525,11 @@ export default function AccountPage() {
               ) : (
                 <div className="text-center py-8">
                   <Icon icon="search" className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-                  <p className="text-secondary-600">You haven't created any listings yet</p>
+                  <p className="text-secondary-600">
+                    {locale === 'ar' ? 'لم تقم بإنشاء أي إعلانات بعد' : 'You haven\'t created any listings yet'}
+                  </p>
                   <Link href="/listings/create" className="btn btn-primary mt-4">
-                    Create Your First Listing
+                    {locale === 'ar' ? 'إنشاء أول إعلان' : 'Create Your First Listing'}
                   </Link>
                 </div>
               )}
@@ -530,7 +539,9 @@ export default function AccountPage() {
           {/* Reviews Tab */}
           {activeTab === 'reviews' && (
             <div className="p-6">
-              <h3 className="text-lg font-medium text-secondary-900 mb-6">My Reviews</h3>
+              <h3 className="text-lg font-medium text-secondary-900 mb-6">
+                {locale === 'ar' ? 'تقييماتي' : 'My Reviews'}
+              </h3>
               {userReviews.length > 0 ? (
                 <div className="space-y-4">
                   {userReviews.map((review) => (
@@ -557,7 +568,9 @@ export default function AccountPage() {
               ) : (
                 <div className="text-center py-8">
                   <Icon icon="star" className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-                  <p className="text-secondary-600">You haven't written any reviews yet</p>
+                  <p className="text-secondary-600">
+                    {locale === 'ar' ? 'لم تكتب أي تقييمات بعد' : 'You haven\'t written any reviews yet'}
+                  </p>
                 </div>
               )}
             </div>
@@ -566,12 +579,16 @@ export default function AccountPage() {
           {/* Messages Tab */}
           {activeTab === 'messages' && (
             <div className="p-6">
-              <h3 className="text-lg font-medium text-secondary-900 mb-6">Messages</h3>
+              <h3 className="text-lg font-medium text-secondary-900 mb-6">
+                {locale === 'ar' ? 'الرسائل' : 'Messages'}
+              </h3>
               <div className="text-center py-8">
                 <Icon icon="mail" className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-                <p className="text-secondary-600">No messages yet</p>
+                <p className="text-secondary-600">
+                  {locale === 'ar' ? 'لا توجد رسائل بعد' : 'No messages yet'}
+                </p>
                 <Link href="/messages" className="btn btn-primary mt-4">
-                  View All Messages
+                  {locale === 'ar' ? 'عرض جميع الرسائل' : 'View All Messages'}
                 </Link>
               </div>
             </div>
@@ -580,35 +597,47 @@ export default function AccountPage() {
           {/* Security Tab */}
           {activeTab === 'security' && (
             <div className="p-6">
-              <h3 className="text-lg font-medium text-secondary-900 mb-6">Security Settings</h3>
+              <h3 className="text-lg font-medium text-secondary-900 mb-6">
+                {locale === 'ar' ? 'إعدادات الأمان' : 'Security Settings'}
+              </h3>
               
               <div className="space-y-8">
                 {/* Account Status */}
                 <div>
-                  <h4 className="text-md font-medium text-secondary-900 mb-4">Account Status</h4>
+                  <h4 className="text-md font-medium text-secondary-900 mb-4">
+                    {locale === 'ar' ? 'حالة الحساب' : 'Account Status'}
+                  </h4>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-secondary-600">Email Verified</span>
+                      <span className="text-sm text-secondary-600">
+                        {locale === 'ar' ? 'البريد الإلكتروني موثق' : 'Email Verified'}
+                      </span>
                       <span className={`badge ${user.emailVerified ? 'badge-success' : 'badge-secondary'}`}>
-                        {user.emailVerified ? 'Verified' : 'Not Verified'}
+                        {user.emailVerified ? (locale === 'ar' ? 'موثق' : 'Verified') : (locale === 'ar' ? 'غير موثق' : 'Not Verified')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-secondary-600">Phone Verified</span>
+                      <span className="text-sm text-secondary-600">
+                        {locale === 'ar' ? 'الهاتف موثق' : 'Phone Verified'}
+                      </span>
                       <span className={`badge ${user.phoneVerified ? 'badge-success' : 'badge-secondary'}`}>
-                        {user.phoneVerified ? 'Verified' : 'Not Verified'}
+                        {user.phoneVerified ? (locale === 'ar' ? 'موثق' : 'Verified') : (locale === 'ar' ? 'غير موثق' : 'Not Verified')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-secondary-600">Profile Completed</span>
+                      <span className="text-sm text-secondary-600">
+                        {locale === 'ar' ? 'الملف الشخصي مكتمل' : 'Profile Completed'}
+                      </span>
                       <span className={`badge ${user.profileCompleted ? 'badge-success' : 'badge-secondary'}`}>
-                        {user.profileCompleted ? 'Complete' : 'Incomplete'}
+                        {user.profileCompleted ? (locale === 'ar' ? 'مكتمل' : 'Complete') : (locale === 'ar' ? 'غير مكتمل' : 'Incomplete')}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-secondary-600">Account Status</span>
+                      <span className="text-sm text-secondary-600">
+                        {locale === 'ar' ? 'حالة الحساب' : 'Account Status'}
+                      </span>
                       <span className={`badge ${user.blocked ? 'badge-error' : user.suspended ? 'badge-warning' : 'badge-success'}`}>
-                        {user.blocked ? 'Blocked' : user.suspended ? 'Suspended' : 'Active'}
+                        {user.blocked ? (locale === 'ar' ? 'محظور' : 'Blocked') : user.suspended ? (locale === 'ar' ? 'معلق' : 'Suspended') : (locale === 'ar' ? 'نشط' : 'Active')}
                       </span>
                     </div>
                   </div>

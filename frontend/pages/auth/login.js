@@ -8,7 +8,7 @@ import { api } from '../../utils/api'
 import { parseApiError, validateEmail, validatePassword } from '../../utils/errorHandling'
 
 export default function Login(){
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,8 +22,8 @@ export default function Login(){
     
     // Client-side validation
     try {
-      validateEmail(email)
-      validatePassword(password)
+      validateEmail(email, locale)
+      validatePassword(password, locale)
     } catch (validationError) {
       setError(validationError)
       return
@@ -35,7 +35,7 @@ export default function Login(){
       login(res.token, res.user)
       router.push('/')
     }catch(err){
-      const parsedError = parseApiError(err)
+      const parsedError = parseApiError(err, locale)
       setError(parsedError)
     } finally {
       setLoading(false)
@@ -63,7 +63,7 @@ export default function Login(){
               value={email} 
               onChange={e=>setEmail(e.target.value)} 
               className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter your email"
+              placeholder={locale === 'ar' ? 'أدخل بريدك الإلكتروني' : 'Enter your email'}
               disabled={loading}
             />
           </div>
@@ -76,7 +76,7 @@ export default function Login(){
               value={password} 
               onChange={e=>setPassword(e.target.value)} 
               className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter your password"
+              placeholder={locale === 'ar' ? 'أدخل كلمة المرور' : 'Enter your password'}
               disabled={loading}
             />
           </div>
@@ -89,7 +89,7 @@ export default function Login(){
             {loading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Signing in...
+                {locale === 'ar' ? 'جاري تسجيل الدخول...' : 'Signing in...'}
               </>
             ) : (
               t('form.signIn')
@@ -98,7 +98,7 @@ export default function Login(){
         </form>
         
         <div className="mt-4 text-center text-sm text-gray-600">
-          Don't have an account?{' '}
+          {locale === 'ar' ? 'ليس لديك حساب؟' : "Don't have an account?"}{' '}
           <a href="/auth/register" className="text-primary-600 hover:text-primary-700 font-medium">
             {t('form.createAccount')}
           </a>

@@ -1,4 +1,5 @@
 const User = require('../models/User')
+const bcrypt = require('bcrypt')
 
 exports.getProfile = async (req, res) => {
   try {
@@ -125,5 +126,48 @@ exports.deleteAccount = async (req, res) => {
     res.json({ ok: true, message: 'Account deleted successfully' })
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message })
+  }
+}
+
+exports.changePassword = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) return res.status(401).json({ ok: false, error: 'Unauthorized' })
+    
+    const { currentPassword, newPassword } = req.body
+    
+    // Validate inputs
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ ok: false, error: 'Current password and new password are required' })
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ ok: false, error: 'New password must be at least 6 characters long' })
+    }
+    
+    // Get user with password
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      return res.status(404).json({ ok: false, error: 'User not found' })
+    }
+    
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password)
+    if (!isCurrentPasswordValid) {
+      return res.status(400).json({ ok: false, error: 'Current password is incorrect' })
+    }
+    
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10)
+    
+    // Update password
+    await User.findByIdAndUpdate(req.user.id, { 
+      password: hashedNewPassword,
+      passwordChangedAt: new Date()
+    })
+    
+    res.json({ ok: true, message: 'Password changed successfully' })
+  } catch (err) {
+    console.error('Password change error:', err)
+    res.status(500).json({ ok: false, error: 'Failed to change password' })
   }
 }

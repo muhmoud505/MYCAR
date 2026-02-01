@@ -31,6 +31,7 @@ router.put('/preferences/:section', authMiddleware, ctrl.updatePreferences)
 router.put('/preferences', authMiddleware, ctrl.updatePreferences)
 router.put('/social-links', authMiddleware, ctrl.updateSocialLinks)
 router.post('/avatar', authMiddleware, upload.single('avatar'), ctrl.uploadAvatar)
+router.put('/change-password', authMiddleware, ctrl.changePassword)
 router.delete('/me', authMiddleware, ctrl.deleteAccount)
 
 module.exports = router

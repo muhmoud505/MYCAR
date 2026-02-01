@@ -8,7 +8,7 @@ import { api } from '../../utils/api'
 import { parseApiError, validateEmail, validatePassword, validateRequired } from '../../utils/errorHandling'
 
 export default function Register(){
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,12 +24,12 @@ export default function Register(){
     
     // Client-side validation
     try {
-      validateRequired(name, 'Name')
-      validateEmail(email)
-      validatePassword(password)
+      validateRequired(name, locale === 'ar' ? 'الاسم' : 'Name', locale)
+      validateEmail(email, locale)
+      validatePassword(password, locale)
       
       if (password !== confirmPassword) {
-        throw new Error('Passwords do not match')
+        throw new Error(locale === 'ar' ? 'كلمات المرور غير متطابقة' : 'Passwords do not match')
       }
     } catch (validationError) {
       setError(validationError)
@@ -43,7 +43,7 @@ export default function Register(){
       login(res.token, res.user)
       router.push('/')
     }catch(err){
-      const parsedError = parseApiError(err)
+      const parsedError = parseApiError(err, locale)
       setError(parsedError)
     } finally {
       setLoading(false)
@@ -71,7 +71,7 @@ export default function Register(){
               value={name} 
               onChange={e=>setName(e.target.value)} 
               className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter your full name"
+              placeholder={locale === 'ar' ? 'أدخل اسمك الكامل' : 'Enter your full name'}
               disabled={loading}
             />
           </div>
@@ -84,7 +84,7 @@ export default function Register(){
               value={email} 
               onChange={e=>setEmail(e.target.value)} 
               className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Enter your email"
+              placeholder={locale === 'ar' ? 'أدخل بريدك الإلكتروني' : 'Enter your email'}
               disabled={loading}
             />
           </div>
@@ -97,20 +97,20 @@ export default function Register(){
               value={password} 
               onChange={e=>setPassword(e.target.value)} 
               className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Create a password (min 6 characters)"
+              placeholder={locale === 'ar' ? 'إنشاء كلمة مرور (6 أحرف على الأقل)' : 'Create a password (min 6 characters)'}
               disabled={loading}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm Password
+              {locale === 'ar' ? 'تأكيد كلمة المرور' : 'Confirm Password'}
             </label>
             <input 
               type="password" 
               value={confirmPassword} 
               onChange={e=>setConfirmPassword(e.target.value)} 
               className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-              placeholder="Confirm your password"
+              placeholder={locale === 'ar' ? 'أكد كلمة المرور' : 'Confirm your password'}
               disabled={loading}
             />
           </div>
@@ -123,7 +123,7 @@ export default function Register(){
             {loading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Creating account...
+                {locale === 'ar' ? 'جاري إنشاء الحساب...' : 'Creating account...'}
               </>
             ) : (
               t('form.createAccount')
@@ -132,7 +132,7 @@ export default function Register(){
         </form>
         
         <div className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{' '}
+          {locale === 'ar' ? 'لديك حساب بالفعل؟' : 'Already have an account?'}{' '}
           <a href="/auth/login" className="text-primary-600 hover:text-primary-700 font-medium">
             {t('form.signIn')}
           </a>

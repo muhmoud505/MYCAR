@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/router'
-import AdminLayout from '../../../components/AdminLayout'
-import { Icon } from '../../../components/UI'
+import AdminLayout from '../../components/AdminLayout'
+import { Icon } from '../../components/UI'
 
 export default function CreateClassified() {
   const router = useRouter()

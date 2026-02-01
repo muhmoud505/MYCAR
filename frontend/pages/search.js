@@ -3,14 +3,44 @@ import { useLocale } from '../contexts/LocaleContext'
 import api from '../utils/api'
 import Navbar from '../components/Navbar'
 
-const BODY_TYPES = ['sedan', 'suv', 'coupe', 'hatchback', 'truck', 'van', 'convertible', 'wagon']
-const FUEL_TYPES = ['gasoline', 'diesel', 'electric', 'hybrid', 'plug-in-hybrid']
-const TRANSMISSIONS = ['manual', 'automatic', 'cvt']
-const CONDITIONS = ['new', 'like-new', 'excellent', 'good', 'fair', 'poor']
-const LISTING_TYPES = ['sale', 'rental', 'classified']
+const BODY_TYPES = [
+  { key: 'sedan', ar: 'سيدان', en: 'Sedan' },
+  { key: 'suv', ar: 'SUV', en: 'SUV' },
+  { key: 'coupe', ar: 'كوبيه', en: 'Coupe' },
+  { key: 'hatchback', ar: 'هاتشباك', en: 'Hatchback' },
+  { key: 'truck', ar: 'شاحنة', en: 'Truck' },
+  { key: 'van', ar: 'فان', en: 'Van' },
+  { key: 'convertible', ar: 'كابريوليه', en: 'Convertible' },
+  { key: 'wagon', ar: 'واجن', en: 'Wagon' }
+]
+const FUEL_TYPES = [
+  { key: 'gasoline', ar: 'بنزين', en: 'Gasoline' },
+  { key: 'diesel', ar: 'ديزل', en: 'Diesel' },
+  { key: 'electric', ar: 'كهربائي', en: 'Electric' },
+  { key: 'hybrid', ar: 'هجين', en: 'Hybrid' },
+  { key: 'plug-in-hybrid', ar: 'هجين قابل للشحن', en: 'Plug-in Hybrid' }
+]
+const TRANSMISSIONS = [
+  { key: 'manual', ar: 'يدوي', en: 'Manual' },
+  { key: 'automatic', ar: 'أوتوماتيكي', en: 'Automatic' },
+  { key: 'cvt', ar: 'CVT', en: 'CVT' }
+]
+const CONDITIONS = [
+  { key: 'new', ar: 'جديد', en: 'New' },
+  { key: 'like-new', ar: 'مثل جديد', en: 'Like New' },
+  { key: 'excellent', ar: 'ممتاز', en: 'Excellent' },
+  { key: 'good', ar: 'جيد', en: 'Good' },
+  { key: 'fair', ar: 'مقبول', en: 'Fair' },
+  { key: 'poor', ar: 'ضعيف', en: 'Poor' }
+]
+const LISTING_TYPES = [
+  { key: 'sale', ar: 'للبيع', en: 'For Sale' },
+  { key: 'rental', ar: 'للإيجار', en: 'For Rental' },
+  { key: 'classified', ar: 'مصنف', en: 'Classified' }
+]
 
 export default function SearchPage(){
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const [q, setQ] = useState('')
   const [make, setMake] = useState('')
   const [model, setModel] = useState('')
@@ -181,51 +211,51 @@ export default function SearchPage(){
               
               {/* Dropdown Filters */}
               <div>
-                <label className="block text-sm font-medium mb-1">Body Type</label>
+                <label className="block text-sm font-medium mb-1">{locale === 'ar' ? 'نوع الهيكل' : 'Body Type'}</label>
                 <select className="p-2 border rounded w-full" value={bodyType} onChange={e=>setBodyType(e.target.value)}>
-                  <option value="">Any</option>
+                  <option value="">{locale === 'ar' ? 'الكل' : 'Any'}</option>
                   {BODY_TYPES.map(type => (
-                    <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                    <option key={type.key} value={type.key}>{locale === 'ar' ? type.ar : type.en}</option>
                   ))}
                 </select>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Fuel Type</label>
+                <label className="block text-sm font-medium mb-1">{locale === 'ar' ? 'نوع الوقود' : 'Fuel Type'}</label>
                 <select className="p-2 border rounded w-full" value={fuelType} onChange={e=>setFuelType(e.target.value)}>
-                  <option value="">Any</option>
+                  <option value="">{locale === 'ar' ? 'الكل' : 'Any'}</option>
                   {FUEL_TYPES.map(type => (
-                    <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                    <option key={type.key} value={type.key}>{locale === 'ar' ? type.ar : type.en}</option>
                   ))}
                 </select>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Transmission</label>
+                <label className="block text-sm font-medium mb-1">{locale === 'ar' ? 'ناقل الحركة' : 'Transmission'}</label>
                 <select className="p-2 border rounded w-full" value={transmission} onChange={e=>setTransmission(e.target.value)}>
-                  <option value="">Any</option>
+                  <option value="">{locale === 'ar' ? 'الكل' : 'Any'}</option>
                   {TRANSMISSIONS.map(type => (
-                    <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                    <option key={type.key} value={type.key}>{locale === 'ar' ? type.ar : type.en}</option>
                   ))}
                 </select>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Condition</label>
+                <label className="block text-sm font-medium mb-1">{locale === 'ar' ? 'الحالة' : 'Condition'}</label>
                 <select className="p-2 border rounded w-full" value={condition} onChange={e=>setCondition(e.target.value)}>
-                  <option value="">Any</option>
+                  <option value="">{locale === 'ar' ? 'الكل' : 'Any'}</option>
                   {CONDITIONS.map(cond => (
-                    <option key={cond} value={cond}>{cond.charAt(0).toUpperCase() + cond.replace('-', ' ')}</option>
+                    <option key={cond.key} value={cond.key}>{locale === 'ar' ? cond.ar : cond.en}</option>
                   ))}
                 </select>
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Listing Type</label>
+                <label className="block text-sm font-medium mb-1">{locale === 'ar' ? 'نوع الإعلان' : 'Listing Type'}</label>
                 <select className="p-2 border rounded w-full" value={type} onChange={e=>setType(e.target.value)}>
-                  <option value="">Any</option>
+                  <option value="">{locale === 'ar' ? 'الكل' : 'Any'}</option>
                   {LISTING_TYPES.map(listType => (
-                    <option key={listType} value={listType}>{listType.charAt(0).toUpperCase() + listType.slice(1)}</option>
+                    <option key={listType.key} value={listType.key}>{locale === 'ar' ? listType.ar : listType.en}</option>
                   ))}
                 </select>
               </div>

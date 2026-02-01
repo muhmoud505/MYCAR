@@ -68,4 +68,8 @@ router.get('/verifications', adminController.getVerifications)
 router.post('/verifications/:verificationId/approve', adminController.approveVerification)
 router.post('/verifications/:verificationId/reject', adminController.rejectVerification)
 
+// Settings management
+router.get('/settings', adminController.getSettings)
+router.put('/settings', adminController.updateSettings)
+
 module.exports = router

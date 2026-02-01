@@ -63,7 +63,31 @@ export const ERROR_MESSAGES = {
   [ERROR_CODES.UNKNOWN_ERROR]: 'An unexpected error occurred. Please try again.'
 }
 
-export function parseApiError(error) {
+export const ERROR_MESSAGES_AR = {
+  [ERROR_CODES.NETWORK_ERROR]: 'فشل الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.',
+  [ERROR_CODES.SERVER_ERROR]: 'حدث خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.',
+  [ERROR_CODES.TIMEOUT_ERROR]: 'انتهت مهلة الطلب. يرجى المحاولة مرة أخرى.',
+  
+  [ERROR_CODES.INVALID_CREDENTIALS]: 'البريد الإلكتروني أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.',
+  [ERROR_CODES.EMAIL_NOT_FOUND]: 'لم يتم العثور على حساب بهذا البريد الإلكتروني.',
+  [ERROR_CODES.EMAIL_ALREADY_EXISTS]: 'يوجد حساب بالفعل بهذا البريد الإلكتروني.',
+  [ERROR_CODES.TOKEN_EXPIRED]: 'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.',
+  [ERROR_CODES.TOKEN_INVALID]: 'جلسة غير صالحة. يرجى تسجيل الدخول مرة أخرى.',
+  [ERROR_CODES.NOT_AUTHORIZED]: 'لست مخولاً للقيام بهذا الإجراء.',
+  
+  [ERROR_CODES.INVALID_EMAIL]: 'يرجى إدخال بريد إلكتروني صحيح.',
+  [ERROR_CODES.INVALID_PASSWORD]: 'كلمة المرور غير صالحة.',
+  [ERROR_CODES.PASSWORD_TOO_SHORT]: 'يجب أن تكون كلمة المرور 6 أحرف على الأقل.',
+  [ERROR_CODES.REQUIRED_FIELD]: 'هذا الحقل مطلوب.',
+  
+  [ERROR_CODES.USER_NOT_FOUND]: 'لم يتم العثور على حساب المستخدم.',
+  [ERROR_CODES.ACCOUNT_LOCKED]: 'تم قفل حسابك. يرجى التواصل مع الدعم.',
+  [ERROR_CODES.EMAIL_NOT_VERIFIED]: 'يرجى التحقق من بريدك الإلكتروني قبل تسجيل الدخول.',
+  
+  [ERROR_CODES.UNKNOWN_ERROR]: 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.'
+}
+
+export function parseApiError(error, locale = 'en') {
   console.error('API Error Details:', {
     message: error.message,
     response: error.response,
@@ -72,18 +96,20 @@ export function parseApiError(error) {
     stack: error.stack
   })
 
+  const messages = locale === 'ar' ? ERROR_MESSAGES_AR : ERROR_MESSAGES
+
   // Handle network errors
   if (!error.response) {
     if (error.code === 'ECONNABORTED') {
       return new AppError(
-        ERROR_MESSAGES[ERROR_CODES.TIMEOUT_ERROR],
+        messages[ERROR_CODES.TIMEOUT_ERROR],
         ERROR_CODES.TIMEOUT_ERROR,
         408,
         true
       )
     }
     return new AppError(
-      ERROR_MESSAGES[ERROR_CODES.NETWORK_ERROR],
+      messages[ERROR_CODES.NETWORK_ERROR],
       ERROR_CODES.NETWORK_ERROR,
       0,
       true
@@ -97,7 +123,7 @@ export function parseApiError(error) {
   switch (status) {
     case 400:
       return new AppError(
-        data?.error || ERROR_MESSAGES[ERROR_CODES.REQUIRED_FIELD],
+        data?.error || messages[ERROR_CODES.REQUIRED_FIELD],
         ERROR_CODES.REQUIRED_FIELD,
         400
       )
@@ -105,41 +131,41 @@ export function parseApiError(error) {
     case 401:
       if (data?.error?.includes('Invalid credentials')) {
         return new AppError(
-          ERROR_MESSAGES[ERROR_CODES.INVALID_CREDENTIALS],
+          messages[ERROR_CODES.INVALID_CREDENTIALS],
           ERROR_CODES.INVALID_CREDENTIALS,
           401
         )
       }
       if (data?.error?.includes('expired')) {
         return new AppError(
-          ERROR_MESSAGES[ERROR_CODES.TOKEN_EXPIRED],
+          messages[ERROR_CODES.TOKEN_EXPIRED],
           ERROR_CODES.TOKEN_EXPIRED,
           401
         )
       }
       return new AppError(
-        data?.error || ERROR_MESSAGES[ERROR_CODES.NOT_AUTHORIZED],
+        data?.error || messages[ERROR_CODES.NOT_AUTHORIZED],
         ERROR_CODES.NOT_AUTHORIZED,
         401
       )
     
     case 403:
       return new AppError(
-        data?.error || ERROR_MESSAGES[ERROR_CODES.NOT_AUTHORIZED],
+        data?.error || messages[ERROR_CODES.NOT_AUTHORIZED],
         ERROR_CODES.NOT_AUTHORIZED,
         403
       )
     
     case 404:
       return new AppError(
-        data?.error || ERROR_MESSAGES[ERROR_CODES.USER_NOT_FOUND],
+        data?.error || messages[ERROR_CODES.USER_NOT_FOUND],
         ERROR_CODES.USER_NOT_FOUND,
         404
       )
     
     case 409:
       return new AppError(
-        data?.error || ERROR_MESSAGES[ERROR_CODES.EMAIL_ALREADY_EXISTS],
+        data?.error || messages[ERROR_CODES.EMAIL_ALREADY_EXISTS],
         ERROR_CODES.EMAIL_ALREADY_EXISTS,
         409
       )
@@ -149,7 +175,7 @@ export function parseApiError(error) {
     case 503:
     case 504:
       return new AppError(
-        data?.error || ERROR_MESSAGES[ERROR_CODES.SERVER_ERROR],
+        data?.error || messages[ERROR_CODES.SERVER_ERROR],
         ERROR_CODES.SERVER_ERROR,
         status,
         true
@@ -157,7 +183,7 @@ export function parseApiError(error) {
     
     default:
       return new AppError(
-        data?.error || ERROR_MESSAGES[ERROR_CODES.UNKNOWN_ERROR],
+        data?.error || messages[ERROR_CODES.UNKNOWN_ERROR],
         ERROR_CODES.UNKNOWN_ERROR,
         status,
         status >= 500
@@ -165,7 +191,7 @@ export function parseApiError(error) {
   }
 }
 
-export function getErrorMessage(error) {
+export function getErrorMessage(error, locale = 'en') {
   if (error instanceof AppError) {
     return error.message
   }
@@ -174,7 +200,8 @@ export function getErrorMessage(error) {
     return error.message
   }
   
-  return ERROR_MESSAGES[ERROR_CODES.UNKNOWN_ERROR]
+  const messages = locale === 'ar' ? ERROR_MESSAGES_AR : ERROR_MESSAGES
+  return messages[ERROR_CODES.UNKNOWN_ERROR]
 }
 
 export function isServerError(error) {
@@ -182,30 +209,34 @@ export function isServerError(error) {
 }
 
 // Validation helpers
-export function validateEmail(email) {
+export function validateEmail(email, locale = 'en') {
+  const messages = locale === 'ar' ? ERROR_MESSAGES_AR : ERROR_MESSAGES
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!email) {
-    throw new AppError(ERROR_MESSAGES[ERROR_CODES.REQUIRED_FIELD], ERROR_CODES.REQUIRED_FIELD)
+    throw new AppError(messages[ERROR_CODES.REQUIRED_FIELD], ERROR_CODES.REQUIRED_FIELD)
   }
   if (!emailRegex.test(email)) {
-    throw new AppError(ERROR_MESSAGES[ERROR_CODES.INVALID_EMAIL], ERROR_CODES.INVALID_EMAIL)
+    throw new AppError(messages[ERROR_CODES.INVALID_EMAIL], ERROR_CODES.INVALID_EMAIL)
   }
   return true
 }
 
-export function validatePassword(password) {
+export function validatePassword(password, locale = 'en') {
+  const messages = locale === 'ar' ? ERROR_MESSAGES_AR : ERROR_MESSAGES
   if (!password) {
-    throw new AppError(ERROR_MESSAGES[ERROR_CODES.REQUIRED_FIELD], ERROR_CODES.REQUIRED_FIELD)
+    throw new AppError(messages[ERROR_CODES.REQUIRED_FIELD], ERROR_CODES.REQUIRED_FIELD)
   }
   if (password.length < 6) {
-    throw new AppError(ERROR_MESSAGES[ERROR_CODES.PASSWORD_TOO_SHORT], ERROR_CODES.PASSWORD_TOO_SHORT)
+    throw new AppError(messages[ERROR_CODES.PASSWORD_TOO_SHORT], ERROR_CODES.PASSWORD_TOO_SHORT)
   }
   return true
 }
 
-export function validateRequired(value, fieldName) {
+export function validateRequired(value, fieldName, locale = 'en') {
+  const messages = locale === 'ar' ? ERROR_MESSAGES_AR : ERROR_MESSAGES
   if (!value || value.trim() === '') {
-    throw new AppError(`${fieldName} is required`, ERROR_CODES.REQUIRED_FIELD)
+    const requiredMsg = locale === 'ar' ? `${fieldName} مطلوب` : `${fieldName} is required`
+    throw new AppError(requiredMsg, ERROR_CODES.REQUIRED_FIELD)
   }
   return true
 }

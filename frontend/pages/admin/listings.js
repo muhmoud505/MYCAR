@@ -186,11 +186,11 @@ export default function AdminListings() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                 <Icon icon="list" className="w-5 h-5 text-blue-600 mr-2" />
-                {locale === 'ar' ? 'دليل الإعلانات' : 'Listings Directory'}
+                Listings Directory
               </h3>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500">
-                  {listings.length} {locale === 'ar' ? 'من' : 'of'} {pagination.total} {locale === 'ar' ? 'النتائج' : 'results'}
+                  {listings.length} of {pagination.total} results
                 </span>
               </div>
             </div>
@@ -199,17 +199,17 @@ export default function AdminListings() {
           {loading ? (
             <div className="p-12 text-center">
               <div className="loading-spinner w-12 h-12 mx-auto mb-4 text-blue-600"></div>
-              <p className="text-gray-600 text-lg">{locale === 'ar' ? 'جاري تحميل الإعلانات...' : 'Loading listings...'}</p>
-              <p className="text-gray-500 text-sm mt-2">{locale === 'ar' ? 'يرجى الانتظار بينما نحصل على البيانات' : 'Please wait while we fetch data'}</p>
+              <p className="text-gray-600 text-lg">Loading listings...</p>
+              <p className="text-gray-500 text-sm mt-2">Please wait while we fetch the data</p>
             </div>
           ) : listings.length === 0 ? (
             <div className="p-12 text-center">
               <Icon icon="car" className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{locale === 'ar' ? 'لم يتم العثور على إعلانات' : 'No listings found'}</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No listings found</h3>
               <p className="text-gray-500">
                 {searchTerm || statusFilter || typeFilter 
-                  ? (locale === 'ar' ? 'حاول تعديل المرشحات أو شروط البحث' : 'Try adjusting your filters or search terms') 
-                  : (locale === 'ar' ? 'لم يتم إنشاء أي إعلانات بعد' : 'No listings have been created yet')}
+                  ? 'Try adjusting your filters or search terms' 
+                  : 'No listings have been created yet'}
               </p>
             </div>
           ) : (
@@ -218,13 +218,13 @@ export default function AdminListings() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'المركبة' : 'Vehicle'}
+                      Vehicle
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'السعر' : 'Price'}
+                      Price
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {locale === 'ar' ? 'البائع' : 'Seller'}
+                      Seller
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status

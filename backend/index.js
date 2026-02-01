@@ -26,6 +26,7 @@ const paymentsRoutes = require('./routes/payments')
 const messagesRoutes = require('./routes/messages')
 const rentalBookingRoutes = require('./routes/rental-booking')
 const adminRoutes = require('./routes/admin')
+const contactRoutes = require('./routes/contact')
 
 // Mount routes
 app.use('/api/auth', authRoutes)
@@ -65,6 +66,7 @@ app.use('/api/payments', paymentsRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/rental-booking', rentalBookingRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/contact', contactRoutes)
 
 // serve uploaded files
 const path = require('path')

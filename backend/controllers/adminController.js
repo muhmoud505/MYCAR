@@ -7,6 +7,7 @@ const Verification = require('../models/Verification')
 const Dealership = require('../models/Dealership')
 const Rental = require('../models/Rental')
 const Classified = require('../models/Classified')
+const Settings = require('../models/Settings')
 
 // Helper function to create admin user if needed
 async function ensureAdminUser() {
@@ -945,4 +946,59 @@ function formatTime(date) {
   if (minutes < 60) return `${minutes} minutes ago`
   if (hours < 24) return `${hours} hours ago`
   return `${days} days ago`
+}
+
+// Settings Management
+exports.getSettings = async (req, res) => {
+  try {
+    const settings = await Settings.getDefaultSettings()
+    res.json({ ok: true, data: settings })
+  } catch (err) {
+    console.error('Error fetching settings:', err)
+    res.status(500).json({ ok: false, error: 'Failed to fetch settings' })
+  }
+}
+
+exports.updateSettings = async (req, res) => {
+  try {
+    const updates = req.body
+    
+    // Validate critical fields
+    if (updates.commissionRate !== undefined) {
+      if (updates.commissionRate < 0 || updates.commissionRate > 50) {
+        return res.status(400).json({ ok: false, error: 'Commission rate must be between 0 and 50' })
+      }
+    }
+    
+    if (updates.maxListingsPerUser !== undefined) {
+      if (updates.maxListingsPerUser < 1 || updates.maxListingsPerUser > 100) {
+        return res.status(400).json({ ok: false, error: 'Max listings per user must be between 1 and 100' })
+      }
+    }
+    
+    if (updates.maxImagesPerListing !== undefined) {
+      if (updates.maxImagesPerListing < 1 || updates.maxImagesPerListing > 50) {
+        return res.status(400).json({ ok: false, error: 'Max images per listing must be between 1 and 50' })
+      }
+    }
+
+    // Get current settings
+    const settings = await Settings.getDefaultSettings()
+    
+    // Update settings
+    Object.assign(settings, updates)
+    settings.lastUpdatedBy = req.user._id
+    settings.lastUpdated = new Date()
+    
+    await settings.save()
+    
+    res.json({ 
+      ok: true, 
+      data: settings,
+      message: 'Settings updated successfully' 
+    })
+  } catch (err) {
+    console.error('Error updating settings:', err)
+    res.status(500).json({ ok: false, error: 'Failed to update settings' })
+  }
 }

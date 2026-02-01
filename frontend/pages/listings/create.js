@@ -8,7 +8,7 @@ import { api } from '../../utils/api'
 import { parseApiError, validateRequired } from '../../utils/errorHandling'
 
 export default function CreateListing(){
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
@@ -34,29 +34,29 @@ export default function CreateListing(){
     
     // Client-side validation
     try {
-      validateRequired(title, 'Title')
-      validateRequired(description, 'Description')
-      validateRequired(price, 'Price')
-      validateRequired(make, 'Make')
-      validateRequired(modelField, 'Model')
-      validateRequired(year, 'Year')
-      validateRequired(mileage, 'Mileage')
-      validateRequired(bodyType, 'Body Type')
-      validateRequired(fuelType, 'Fuel Type')
-      validateRequired(transmission, 'Transmission')
-      validateRequired(color, 'Color')
-      validateRequired(city, 'City')
+      validateRequired(title, locale === 'ar' ? 'العنوان' : 'Title', locale)
+      validateRequired(description, locale === 'ar' ? 'الوصف' : 'Description', locale)
+      validateRequired(price, locale === 'ar' ? 'السعر' : 'Price', locale)
+      validateRequired(make, locale === 'ar' ? 'الصانع' : 'Make', locale)
+      validateRequired(modelField, locale === 'ar' ? 'الموديل' : 'Model', locale)
+      validateRequired(year, locale === 'ar' ? 'السنة' : 'Year', locale)
+      validateRequired(mileage, locale === 'ar' ? 'المسافة المقطوعة' : 'Mileage', locale)
+      validateRequired(bodyType, locale === 'ar' ? 'نوع الهيكل' : 'Body Type', locale)
+      validateRequired(fuelType, locale === 'ar' ? 'نوع الوقود' : 'Fuel Type', locale)
+      validateRequired(transmission, locale === 'ar' ? 'ناقل الحركة' : 'Transmission', locale)
+      validateRequired(color, locale === 'ar' ? 'اللون' : 'Color', locale)
+      validateRequired(city, locale === 'ar' ? 'المدينة' : 'City', locale)
       
       if (isNaN(price) || parseFloat(price) <= 0) {
-        throw new Error('Price must be a valid positive number')
+        throw new Error(locale === 'ar' ? 'يجب أن يكون السعر رقماً موجباً صالحاً' : 'Price must be a valid positive number')
       }
       
       if (isNaN(year) || parseInt(year) < 1900 || parseInt(year) > new Date().getFullYear() + 1) {
-        throw new Error('Please enter a valid year')
+        throw new Error(locale === 'ar' ? 'يرجى إدخال سنة صالحة' : 'Please enter a valid year')
       }
       
       if (isNaN(mileage) || parseFloat(mileage) < 0) {
-        throw new Error('Mileage must be a valid number')
+        throw new Error(locale === 'ar' ? 'يجب أن تكون المسافة المقطوعة رقماً صالحاً' : 'Mileage must be a valid number')
       }
     } catch (validationError) {
       setError(validationError)
@@ -93,9 +93,9 @@ export default function CreateListing(){
       }
       
       router.push('/inventory')
-    }catch(err){
-      const parsedError = parseApiError(err)
-      setError(parsedError)
+    } catch (err) {
+      console.error('Listing creation error:', err)
+      setError(parseApiError(err, locale))
     } finally {
       setLoading(false)
     }
@@ -182,7 +182,9 @@ export default function CreateListing(){
 
           {/* Vehicle Details */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Vehicle Details</h3>
+            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+              {locale === 'ar' ? 'تفاصيل المركبة' : 'Vehicle Details'}
+            </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -193,7 +195,7 @@ export default function CreateListing(){
                   value={make} 
                   onChange={e=>setMake(e.target.value)} 
                   className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Toyota"
+                  placeholder={locale === 'ar' ? 'تويوتا' : 'Toyota'}
                   disabled={loading}
                 />
               </div>
@@ -205,7 +207,7 @@ export default function CreateListing(){
                   value={modelField} 
                   onChange={e=>setModelField(e.target.value)} 
                   className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="Camry"
+                  placeholder={locale === 'ar' ? 'كامري' : 'Camry'}
                   disabled={loading}
                 />
               </div>
@@ -218,7 +220,7 @@ export default function CreateListing(){
                   value={year} 
                   onChange={e=>setYear(e.target.value)} 
                   className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="2022"
+                  placeholder={locale === 'ar' ? '2022' : '2022'}
                   min="1900"
                   max={new Date().getFullYear() + 1}
                   disabled={loading}
@@ -233,7 +235,7 @@ export default function CreateListing(){
                   value={mileage} 
                   onChange={e=>setMileage(e.target.value)} 
                   className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
-                  placeholder="25000"
+                  placeholder={locale === 'ar' ? '25000' : '25000'}
                   min="0"
                   disabled={loading}
                 />
